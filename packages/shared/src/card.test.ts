@@ -42,11 +42,21 @@ describe('CardSchema', () => {
 
 describe('SwipeSchema', () => {
   it('accepts like and skip', () => {
-    expect(SwipeSchema.safeParse({ cardId: 'a', direction: 'like' }).success).toBe(true);
-    expect(SwipeSchema.safeParse({ cardId: 'a', direction: 'skip' }).success).toBe(true);
+    expect(SwipeSchema.safeParse({ cardId: 'a', memberId: 'm', direction: 'like' }).success).toBe(
+      true,
+    );
+    expect(SwipeSchema.safeParse({ cardId: 'a', memberId: 'm', direction: 'skip' }).success).toBe(
+      true,
+    );
   });
 
   it('rejects unknown directions', () => {
-    expect(SwipeSchema.safeParse({ cardId: 'a', direction: 'superlike' }).success).toBe(false);
+    expect(
+      SwipeSchema.safeParse({ cardId: 'a', memberId: 'm', direction: 'superlike' }).success,
+    ).toBe(false);
+  });
+
+  it('requires a member id', () => {
+    expect(SwipeSchema.safeParse({ cardId: 'a', direction: 'like' }).success).toBe(false);
   });
 });

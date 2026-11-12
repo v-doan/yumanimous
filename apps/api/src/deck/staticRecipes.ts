@@ -1,7 +1,7 @@
 import type { Card } from '@yumanimous/shared';
 
 /**
- * Phase 1 hard-coded deck. Phase 3 replaces this with a real recipe source.
+ * Hard-coded deck (Phase 1-2). Phase 3 replaces this with a real recipe source.
  *
  * Every imageUrl below was checked before committing: HTTP 200 with an image/*
  * content type, and the photo was viewed to confirm it shows the dish. Unsplash
@@ -13,7 +13,7 @@ const unsplash = (photoId: string) =>
 
 const credit = { name: 'Unsplash', url: 'https://unsplash.com' };
 
-export const recipes: Card[] = [
+export const staticRecipes: Card[] = [
   {
     id: 'rainbow-chickpea-bowl',
     title: 'Rainbow Chickpea Bowl',

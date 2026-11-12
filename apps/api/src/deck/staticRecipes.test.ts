@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CardSchema } from '@yumanimous/shared';
-import { recipes } from './recipes';
+import { staticRecipes as recipes } from './staticRecipes.js';
 
 describe('hard-coded recipes', () => {
   it('has 10 cards', () => {

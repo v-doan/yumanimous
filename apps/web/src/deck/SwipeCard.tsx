@@ -36,7 +36,7 @@ export function SwipeCard({ card, depth, onSwiped, ref }: SwipeCardProps) {
   const leaving = useRef(false);
   const reduceMotion = useReducedMotion();
 
-  // `x` is the single source of truth for the gesture; rotation and the LIKE/NOPE
+  // `x` is the single source of truth for the gesture; rotation and the YUM/NOPE
   // stamps are derived from it, so drag, buttons and spring-back all stay in sync.
   const x = useMotionValue(0);
   const opacity = useMotionValue(1);
@@ -102,7 +102,7 @@ export function SwipeCard({ card, depth, onSwiped, ref }: SwipeCardProps) {
           className={`${styles.stamp} ${styles.stampLike}`}
           style={{ opacity: likeOpacity }}
         >
-          Like
+          Yum
         </motion.span>
         <motion.span
           className={`${styles.stamp} ${styles.stampNope}`}

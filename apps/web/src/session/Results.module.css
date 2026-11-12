@@ -1,0 +1,51 @@
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+}
+
+.title {
+  font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.count {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thin vote bar under each row; width set from the yum share via --fill. */
+.bar {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    to right,
+    var(--color-green) var(--fill),
+    var(--color-chip) var(--fill)
+  );
+}
+
+.match {
+  border-color: var(--color-green);
+  border-width: 2px;
+}
+
+.no-match {
+  opacity: 0.6;
+}

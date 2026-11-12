@@ -1,0 +1,38 @@
+.room {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--space-2);
+  min-height: 0;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 32px;
+}
+
+.bar-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.toast {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* Above the Skip / Yum buttons. */
+  bottom: 88px;
+  margin: 0 auto;
+  width: fit-content;
+  max-width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  z-index: 30;
+}

@@ -5,9 +5,21 @@ import '@fontsource/bricolage-grotesque/800.css';
 import '@fontsource-variable/inter';
 import './styles/global.css';
 import { App } from './App';
+import { HomePage } from './pages/HomePage';
+import { NotFound } from './pages/NotFound';
+import { SessionPage } from './pages/SessionPage';
 
-// One route for now; Phase 2 adds /s/:code for joining a session by link.
-const router = createBrowserRouter([{ path: '/', element: <App /> }]);
+// `/s/:code` is the link shared in the group chat.
+const router = createBrowserRouter([
+  {
+    element: <App />,
+    children: [
+      { path: '/', element: <HomePage /> },
+      { path: '/s/:code', element: <SessionPage /> },
+      { path: '*', element: <NotFound /> },
+    ],
+  },
+]);
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root element');

@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { useState } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { Card } from '@yumanimous/shared';
+import type { Card, SwipeDirection } from '@yumanimous/shared';
 import { SwipeDeck } from './SwipeDeck';
 
 const cards: Card[] = [
@@ -16,64 +17,79 @@ const cards: Card[] = [
   { id: 'stew', title: 'Bean Stew', tags: [], blurb: 'Hearty.' },
 ];
 
+/** Stands in for the session: owns the index the way SessionRoom does. */
+function Harness({ onSwipe }: { onSwipe: (id: string, d: SwipeDirection) => void }) {
+  const [index, setIndex] = useState(0);
+  return (
+    <SwipeDeck
+      cards={cards}
+      index={index}
+      onSwipe={(id, d) => {
+        onSwipe(id, d);
+        setIndex((i) => i + 1);
+      }}
+    />
+  );
+}
+
 const topCardTitle = () =>
   within(screen.getByTestId('top-card')).getByRole('heading', { level: 2 }).textContent;
 
 describe('SwipeDeck', () => {
-  it('shows the first card on top with progress', () => {
-    render(<SwipeDeck cards={cards} />);
-    expect(topCardTitle()).toBe('Tomato Soup');
-    expect(screen.getByText('1 / 3')).toBeInTheDocument();
+  it('shows the card at the given index on top, with progress', () => {
+    render(<SwipeDeck cards={cards} index={1} onSwipe={() => {}} />);
+    expect(topCardTitle()).toBe('Green Salad');
+    expect(screen.getByText('2 / 3')).toBeInTheDocument();
   });
 
-  it('advances when Like and Skip are tapped', async () => {
+  it('reports Yum and Skip taps with the card id', async () => {
     const user = userEvent.setup();
-    render(<SwipeDeck cards={cards} />);
+    const onSwipe = vi.fn();
+    render(<Harness onSwipe={onSwipe} />);
 
-    await user.click(screen.getByRole('button', { name: /like this recipe/i }));
+    await user.click(screen.getByRole('button', { name: /^yum/i }));
     expect(await screen.findByText('2 / 3')).toBeInTheDocument();
-    expect(topCardTitle()).toBe('Green Salad');
-
     await user.click(screen.getByRole('button', { name: /skip this recipe/i }));
     expect(await screen.findByText('3 / 3')).toBeInTheDocument();
-    expect(topCardTitle()).toBe('Bean Stew');
+
+    expect(onSwipe.mock.calls).toEqual([
+      ['soup', 'like'],
+      ['salad', 'skip'],
+    ]);
+  });
+
+  it('labels the like button "Yum" for sighted, screen-reader and voice users', () => {
+    render(<SwipeDeck cards={cards} index={0} onSwipe={() => {}} />);
+    const yum = screen.getByRole('button', { name: 'Yum, like this recipe' });
+    expect(yum).toHaveTextContent('Yum');
   });
 
   it('supports arrow keys', async () => {
     const user = userEvent.setup();
-    render(<SwipeDeck cards={cards} />);
+    const onSwipe = vi.fn();
+    render(<Harness onSwipe={onSwipe} />);
     await user.keyboard('{ArrowRight}');
-    expect(await screen.findByText('2 / 3')).toBeInTheDocument();
+    await screen.findByText('2 / 3');
+    await user.keyboard('{ArrowLeft}');
+    await screen.findByText('3 / 3');
+    expect(onSwipe.mock.calls).toEqual([
+      ['soup', 'like'],
+      ['salad', 'skip'],
+    ]);
   });
 
-  it('shows liked cards on the end screen and can restart', async () => {
-    const user = userEvent.setup();
-    render(<SwipeDeck cards={cards} />);
-
-    await user.click(screen.getByRole('button', { name: /like this recipe/i }));
-    await screen.findByText('2 / 3');
-    await user.click(screen.getByRole('button', { name: /skip this recipe/i }));
-    await screen.findByText('3 / 3');
-    await user.click(screen.getByRole('button', { name: /like this recipe/i }));
-
-    expect(await screen.findByRole('heading', { name: /deck!/i })).toBeInTheDocument();
-    expect(screen.getByText('You liked 2 of 3.')).toBeInTheDocument();
-    const list = screen.getByRole('list', { name: /recipes you liked/i });
-    expect(within(list).getByText('Tomato Soup')).toBeInTheDocument();
-    expect(within(list).getByText('Bean Stew')).toBeInTheDocument();
-    expect(within(list).queryByText('Green Salad')).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: /swipe again/i }));
-    expect(topCardTitle()).toBe('Tomato Soup');
+  it('renders nothing once the index passes the last card', () => {
+    const { container } = render(<SwipeDeck cards={cards} index={3} onSwipe={() => {}} />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('renders a placeholder with the recipe name when a card has no image', () => {
-    render(<SwipeDeck cards={[cards[1]!]} />);
+    render(<SwipeDeck cards={[cards[1]!]} index={0} onSwipe={() => {}} />);
     expect(screen.getByTestId('card-image-placeholder')).toHaveTextContent('Green Salad');
   });
 
   it('falls back to the placeholder when an image fails to load', async () => {
-    render(<SwipeDeck cards={[cards[0]!]} />);
+    render(<SwipeDeck cards={[cards[0]!]} index={0} onSwipe={() => {}} />);
     fireEvent.error(screen.getByRole('img', { name: 'Tomato Soup' }));
     expect(await screen.findByTestId('card-image-placeholder')).toHaveTextContent('Tomato Soup');
   });
