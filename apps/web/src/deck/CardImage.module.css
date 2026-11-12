@@ -1,13 +1,34 @@
-.image,
+.frame,
 .placeholder {
   display: block;
   width: 100%;
   height: 100%;
 }
 
+.frame {
+  position: relative;
+  overflow: hidden;
+}
+
+.backdrop,
 .image {
-  object-fit: cover;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
+}
+
+/* Fills the space around the photo with its own colours instead of empty bars.
+   Scaled up so the blur's soft edges fall outside the frame. */
+.backdrop {
+  object-fit: cover;
+  filter: blur(24px) saturate(1.2);
+  transform: scale(1.2);
+}
+
+.image {
+  object-fit: contain;
 }
 
 .placeholder {

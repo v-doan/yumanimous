@@ -31,8 +31,6 @@ type AppSocket = Socket<
 >;
 
 export interface RealtimeOptions {
-  /** How long a member may be offline (refresh, tunnel, locked phone) before removal. */
-  graceMs: number;
   webOrigin?: string | undefined;
 }
 
@@ -44,7 +42,7 @@ export interface RealtimeOptions {
 export function attachRealtime(
   httpServer: HttpServer,
   service: SessionService,
-  { graceMs, webOrigin }: RealtimeOptions,
+  { webOrigin }: RealtimeOptions = {},
 ) {
   const io: AppServer = new Server(httpServer, {
     serveClient: false,
@@ -54,8 +52,9 @@ export function attachRealtime(
   });
 
   // A member can have several sockets (two tabs). They're offline only when the
-  // last one closes. Key: `${code}:${memberId}`.
-  const presence = new Map<string, { sockets: number; graceTimer?: NodeJS.Timeout }>();
+  // last one closes. Key: `${code}:${memberId}`, value: open socket count. Removal
+  // after the grace period is the service's presence sweep, not a timer here.
+  const presence = new Map<string, number>();
   const key = (code: string, memberId: string) => `${code}:${memberId}`;
 
   // Handshake auth: the rejoin token proves who this socket is. No token, no room.
@@ -72,11 +71,7 @@ export function attachRealtime(
     const { code, memberId } = socket.data;
     void socket.join(code);
 
-    const entry = presence.get(key(code, memberId)) ?? { sockets: 0 };
-    clearTimeout(entry.graceTimer);
-    entry.graceTimer = undefined;
-    entry.sockets++;
-    presence.set(key(code, memberId), entry);
+    presence.set(key(code, memberId), (presence.get(key(code, memberId)) ?? 0) + 1);
 
     socket.on(
       'swipe',
@@ -94,18 +89,13 @@ export function attachRealtime(
     );
 
     socket.on('disconnect', () => {
-      const current = presence.get(key(code, memberId));
-      if (!current) return;
-      current.sockets--;
-      if (current.sockets > 0 || socket.data.removed) {
-        if (socket.data.removed) presence.delete(key(code, memberId));
+      const remaining = (presence.get(key(code, memberId)) ?? 1) - 1;
+      if (remaining > 0) {
+        presence.set(key(code, memberId), remaining);
         return;
       }
-      void service.setConnected(code, memberId, false).catch(logError);
-      current.graceTimer = setTimeout(() => {
-        presence.delete(key(code, memberId));
-        void service.removeMember(code, memberId).catch(logError);
-      }, graceMs);
+      presence.delete(key(code, memberId));
+      if (!socket.data.removed) void service.setConnected(code, memberId, false).catch(logError);
     });
 
     try {
@@ -133,7 +123,6 @@ export function attachRealtime(
           // Let the 'removed' event and any pending ack flush before closing.
           setImmediate(() => socket.disconnect(true));
         }
-        clearTimeout(presence.get(key(event.code, event.memberId))?.graceTimer);
         break;
       case 'ended':
         io.to(event.code).emit('session:ended', 'expired');
@@ -153,7 +142,6 @@ export function attachRealtime(
     io,
     close: async () => {
       unsubscribe();
-      for (const entry of presence.values()) clearTimeout(entry.graceTimer);
       presence.clear();
       await io.close();
     },

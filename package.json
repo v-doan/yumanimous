@@ -9,6 +9,9 @@
   "scripts": {
     "dev": "concurrently -k -n api,web -c magenta,cyan \"npm run dev -w @yumanimous/api\" \"npm run dev -w @yumanimous/web\"",
     "build": "npm run build --workspaces --if-present",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run db:migrate -w @yumanimous/api",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",

@@ -165,14 +165,17 @@ export class SessionService {
     });
   }
 
-  /** Online/offline only. Offline members still count toward matches until removed. */
+  /**
+   * Online/offline only. Offline members still count toward matches until the
+   * presence sweep removes them (see `removeStaleMembers`).
+   */
   async setConnected(code: string, memberId: string, connected: boolean): Promise<void> {
     await this.update(
       code,
       (session) => {
         const member = session.members.find((m) => m.id === memberId);
-        if (!member || member.connected === connected) return false;
-        member.connected = connected;
+        if (!member || (member.disconnectedAt === null) === connected) return false;
+        member.disconnectedAt = connected ? null : this.now();
         return true;
       },
       { ifExists: true },
@@ -184,7 +187,11 @@ export class SessionService {
    * swipes are deleted, so their votes stop counting (which can create a match).
    * The host role passes to the earliest-joined member, preferring one who is online.
    */
-  async removeMember(code: string, memberId: string): Promise<void> {
+  async removeMember(
+    code: string,
+    memberId: string,
+    { onlyIfOfflineSince }: { onlyIfOfflineSince?: number } = {},
+  ): Promise<void> {
     let removed = false;
     let empty = false;
     await this.update(
@@ -192,6 +199,15 @@ export class SessionService {
       (session) => {
         const index = session.members.findIndex((m) => m.id === memberId);
         if (index === -1) return false;
+        // The sweep re-checks under the lock: the member may have reconnected
+        // between the sweep's query and now, and must not be removed then.
+        const member = session.members[index]!;
+        if (
+          onlyIfOfflineSince !== undefined &&
+          (member.disconnectedAt === null || member.disconnectedAt >= onlyIfOfflineSince)
+        ) {
+          return false;
+        }
         session.members.splice(index, 1);
         session.swipes = session.swipes.filter((s) => s.memberId !== memberId);
         removed = true;
@@ -201,7 +217,8 @@ export class SessionService {
           return false; // Nothing to broadcast to; deleted below.
         }
         if (session.hostId === memberId) {
-          const next = session.members.find((m) => m.connected) ?? session.members[0]!;
+          const next =
+            session.members.find((m) => m.disconnectedAt === null) ?? session.members[0]!;
           session.hostId = next.id;
         }
         return true;
@@ -211,6 +228,29 @@ export class SessionService {
 
     if (removed) this.emit({ type: 'member-removed', code, memberId });
     if (empty) await this.end(code);
+  }
+
+  /**
+   * Removes members offline for longer than `graceMs`. Runs on an interval instead of
+   * one timer per disconnect, because timers die with the process; the timestamps in
+   * the store survive an API restart. Returns how many were removed.
+   */
+  async removeStaleMembers(graceMs: number): Promise<number> {
+    const cutoff = this.now() - graceMs;
+    const stale = await this.store.disconnectedBefore(cutoff);
+    for (const { code, memberId } of stale) {
+      await this.removeMember(code, memberId, { onlyIfOfflineSince: cutoff });
+    }
+    return stale.length;
+  }
+
+  /**
+   * Called once at startup: no sockets exist yet, so everyone is offline as of now.
+   * Their phones reconnect automatically; anyone who doesn't is swept after the grace
+   * period. (Assumes one API process; several would need shared presence.)
+   */
+  async markAllOffline(): Promise<void> {
+    await this.store.markAllDisconnected(this.now());
   }
 
   /** Deletes sessions with no activity for `maxIdleMs`. Returns how many were removed. */
@@ -229,7 +269,7 @@ export class SessionService {
       tokenHash: hashToken(token),
       joinedAt: this.now(),
       // Joining is a REST call; the member counts as online once their socket connects.
-      connected: false,
+      disconnectedAt: this.now(),
     };
   }
 
@@ -245,9 +285,12 @@ export class SessionService {
   }
 
   /**
-   * Read-modify-write under a per-session lock. Two members swiping the same instant
-   * would otherwise both read the old state and one swipe would be lost. Matches are
-   * re-evaluated after every change, and listeners hear about it once it's saved.
+   * Read-modify-write, atomically. Two members swiping the same instant would
+   * otherwise both read the old state and one swipe would be lost. Two layers:
+   * - an in-process lock queues operations on one session (cheap, no DB contention);
+   * - the store's transaction (`SELECT ... FOR UPDATE` in Postgres) protects against
+   *   other API processes.
+   * Matches are re-evaluated after every change; listeners hear about it once saved.
    *
    * `mutate` may return `false` to mean "nothing changed, don't save or broadcast".
    */
@@ -256,26 +299,27 @@ export class SessionService {
     mutate: (session: StoredSession) => T,
     { ifExists = false } = {},
   ): Promise<T> {
-    const result = await this.withLock(code, async () => {
-      const session = await this.store.get(code);
-      if (!session) {
-        if (ifExists) return { value: undefined as T, session: undefined, newMatches: [] };
-        throw new SessionError('not_found', 'That session does not exist');
-      }
-      const value = mutate(session);
-      if (value === false) return { value, session: undefined, newMatches: [] };
+    let newMatches: string[] = [];
+    const { value, saved } = await this.withLock(code, () =>
+      this.store.update(code, (session) => {
+        if (!session) {
+          if (ifExists) return { save: false, value: undefined as T };
+          throw new SessionError('not_found', 'That session does not exist');
+        }
+        const result = mutate(session);
+        if (result === false) return { save: false, value: result };
 
-      const newMatches = recordNewMatches(session, this.now());
-      session.updatedAt = this.now();
-      await this.store.save(session);
-      return { value, session, newMatches };
-    });
+        newMatches = recordNewMatches(session, this.now());
+        session.updatedAt = this.now();
+        return { save: true, value: result };
+      }),
+    );
 
-    if (result.session) {
-      this.emit({ type: 'changed', code, view: toView(result.session) });
-      for (const cardId of result.newMatches) this.emit({ type: 'match', code, cardId });
+    if (saved) {
+      this.emit({ type: 'changed', code, view: toView(saved) });
+      for (const cardId of newMatches) this.emit({ type: 'match', code, cardId });
     }
-    return result.value;
+    return value;
   }
 
   private async withLock<T>(code: string, fn: () => Promise<T>): Promise<T> {
@@ -328,7 +372,7 @@ export function toView(session: StoredSession): SessionView {
     id: m.id,
     name: m.name,
     isHost: m.id === session.hostId,
-    connected: m.connected,
+    connected: m.disconnectedAt === null,
     swipedCount: swipedCount(m.id),
     joinedAt: m.joinedAt,
   }));

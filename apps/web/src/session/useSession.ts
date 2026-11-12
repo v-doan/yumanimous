@@ -45,7 +45,14 @@ export function useSession(membership: Membership) {
     };
 
     socket.on('connect', () => setStatus('online'));
-    socket.on('disconnect', () => setStatus('reconnecting'));
+    socket.on('disconnect', (reason) => {
+      setStatus('reconnecting');
+      // A server restart or deploy closes sockets with "io server disconnect", which
+      // socket.io deliberately doesn't retry. Sessions now survive restarts (Phase 3),
+      // so retry. When the server means it (member removed), `session:ended` arrives
+      // first and `end()` has already disconnected us, so this doesn't fire then.
+      if (reason === 'io server disconnect') socket.connect();
+    });
     socket.on('session:state', setView);
     socket.on('session:match', ({ cardId }) => setMatchQueue((q) => [...q, cardId]));
     socket.on('session:ended', end);

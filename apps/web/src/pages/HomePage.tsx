@@ -16,6 +16,14 @@ export function HomePage() {
       <p className={ui.muted}>Can’t decide what to eat? Swipe together until you’re yumanimous.</p>
       <CreateSessionForm />
       <JoinByCodeForm />
+      {/* Attribution required by the recipe API's terms. */}
+      <p className={ui.muted}>
+        Recipes from{' '}
+        <a href="https://spoonacular.com/food-api" target="_blank" rel="noopener noreferrer">
+          Spoonacular
+        </a>
+        .
+      </p>
     </div>
   );
 }

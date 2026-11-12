@@ -16,7 +16,7 @@ let server: Awaited<ReturnType<typeof createServer>>;
 const clients: Client[] = [];
 
 beforeEach(async () => {
-  server = await createServer({ port: 0, graceMs: GRACE_MS });
+  server = await createServer({ port: 0, graceMs: GRACE_MS, presenceSweepMs: 50 });
 });
 
 afterEach(async () => {
