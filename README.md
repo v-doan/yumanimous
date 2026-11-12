@@ -7,7 +7,7 @@ _yumanimous_. Zero install: join from a link in the group chat.
 
 ## Quick start
 
-Requires Node 22 (see `.nvmrc`).
+Requires Node 22.22 or newer (see `.nvmrc`; react-router 8 needs it).
 
 ```sh
 npm install
