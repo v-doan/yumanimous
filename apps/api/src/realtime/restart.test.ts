@@ -8,7 +8,7 @@ import type {
   SessionView,
 } from '@yumanimous/shared';
 import { createServer } from '../createServer.js';
-import { createTestDatabase, databaseUrl } from '../test/testDatabase.js';
+import { createTestDatabase, databaseUrl } from '@yumanimous/db/testing';
 
 type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
 

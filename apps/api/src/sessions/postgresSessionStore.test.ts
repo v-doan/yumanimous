@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Card } from '@yumanimous/shared';
-import { PostgresApiCache, PostgresCardCatalog } from '../cache/caches.js';
+import { PostgresApiCache, PostgresCardCatalog } from '@yumanimous/db';
 import type { DeckSource } from '../deck/deckSource.js';
-import { createTestDatabase, databaseUrl } from '../test/testDatabase.js';
+import { createTestDatabase, databaseUrl } from '@yumanimous/db/testing';
 import { PostgresSessionStore } from './postgresSessionStore.js';
 import { SessionService } from './sessionService.js';
 

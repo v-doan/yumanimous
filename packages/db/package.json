@@ -1,0 +1,18 @@
+{
+  "name": "@yumanimous/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/testDatabase.ts"
+  },
+  "scripts": {
+    "db:migrate": "tsx --env-file-if-exists=../../.env src/migrateCli.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@yumanimous/shared": "*",
+    "pg": "^8.23.1"
+  }
+}

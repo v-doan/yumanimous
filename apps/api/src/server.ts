@@ -25,7 +25,7 @@ const server = await createServer({
   console.error(
     '\nCan’t reach Postgres at DATABASE_URL.\n' +
       '  Start it:  npm run db:up   (needs Docker Desktop running)\n' +
-      '  Or run without a database: remove DATABASE_URL from apps/api/.env\n',
+      '  Or run without a database: remove DATABASE_URL from .env\n',
   );
   process.exit(1);
 });

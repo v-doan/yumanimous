@@ -1,18 +1,18 @@
 import { createServer as createHttpServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import pg from 'pg';
 import {
+  createPool,
   InMemoryApiCache,
+  migrate,
   noopCardCatalog,
   PostgresApiCache,
   PostgresCardCatalog,
-} from './cache/caches.js';
-import { migrate } from './db/migrate.js';
+} from '@yumanimous/db';
 import { staticRecipeDeck, type DeckSource } from './deck/deckSource.js';
 import { RecipeDeckSource } from './deck/recipeDeckSource.js';
 import { createApp } from './http/app.js';
 import { attachRealtime } from './realtime/realtime.js';
-import { SpoonacularClient } from './recipes/spoonacular.js';
+import { SpoonacularClient } from '@yumanimous/mcp-recipes';
 import { PostgresSessionStore } from './sessions/postgresSessionStore.js';
 import { InMemorySessionStore, type SessionStore } from './sessions/sessionStore.js';
 import { SessionService } from './sessions/sessionService.js';
@@ -49,7 +49,7 @@ export async function createServer({
   now,
   ...overrides
 }: ServerOptions) {
-  const pool = databaseUrl ? new pg.Pool({ connectionString: databaseUrl }) : null;
+  const pool = databaseUrl ? createPool(databaseUrl) : null;
   if (pool) await migrate(pool);
 
   const store =

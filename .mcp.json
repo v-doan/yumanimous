@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "yumanimous-recipes": {
+      "command": "node",
+      "args": ["--env-file-if-exists=.env", "--import", "tsx", "packages/mcp-recipes/src/stdio.ts"]
+    },
+    "yumanimous-session": {
+      "command": "node",
+      "args": ["--env-file-if-exists=.env", "--import", "tsx", "packages/mcp-session/src/stdio.ts"]
+    }
+  }
+}

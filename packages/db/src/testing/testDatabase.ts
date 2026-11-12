@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { inject } from 'vitest';
-import { migrate } from '../db/migrate.js';
+import { migrate } from '../migrate.js';
+import './providedContext.js';
 
 /** '' when no Postgres is available; use with `describe.skipIf(!databaseUrl)`. */
 export const databaseUrl = inject('databaseUrl');

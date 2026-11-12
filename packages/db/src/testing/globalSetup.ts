@@ -1,12 +1,7 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import type { TestProject } from 'vitest/node';
 
-declare module 'vitest' {
-  export interface ProvidedContext {
-    /** Admin connection string for a test Postgres, or '' when none is available. */
-    databaseUrl: string;
-  }
-}
+import './providedContext.js';
 
 /**
  * Runs once per `vitest run`. Starts a throwaway Postgres in Docker (Testcontainers)

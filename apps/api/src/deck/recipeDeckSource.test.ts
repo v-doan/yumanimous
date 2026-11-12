@@ -1,13 +1,19 @@
 import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Card } from '@yumanimous/shared';
-import { InMemoryApiCache, type CardCatalog } from '../cache/caches.js';
-import { RecipeApiError, type SpoonacularClient } from '../recipes/spoonacular.js';
+import { InMemoryApiCache, type CardCatalog } from '@yumanimous/db';
+import { RecipeApiError, type SpoonacularClient } from '@yumanimous/mcp-recipes';
 import { staticRecipeDeck } from './deckSource.js';
 import { RecipeDeckSource, sample } from './recipeDeckSource.js';
 
 const fixture = JSON.parse(
-  readFileSync(new URL('../recipes/__fixtures__/complexSearch.json', import.meta.url), 'utf8'),
+  readFileSync(
+    new URL(
+      '../../../../packages/mcp-recipes/src/__fixtures__/complexSearch.json',
+      import.meta.url,
+    ),
+    'utf8',
+  ),
 );
 const quota = { request: 4, used: 4, left: 46 };
 const silent = { info: () => {}, warn: () => {} };

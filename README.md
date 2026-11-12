@@ -3,8 +3,9 @@
 Swipe-to-decide for groups: everyone swipes on a shared deck, and it's a match when the group is
 _yumanimous_. Zero install: join from a link in the group chat.
 
-> Work in progress. Phase 3: sessions persist in Postgres (an API restart mid-session goes
-> unnoticed) and decks come from a real recipe API, cached to respect its free quota.
+> Work in progress. Phase 4: two MCP servers expose recipes and live session data to Claude
+> (Desktop, Code, and the app's own agents from Phase 6). Sessions persist in Postgres and decks come
+> from a real recipe API, cached to respect its free quota.
 
 ## Quick start
 
@@ -12,7 +13,7 @@ Requires Node 22.22 or newer (see `.nvmrc`; react-router 8 needs it).
 
 ```sh
 npm install
-cp .env.example apps/api/.env   # then add your SPOONACULAR_API_KEY
+cp .env.example .env   # then add your SPOONACULAR_API_KEY
 npm run db:up      # Postgres 18 in Docker (needs Docker Desktop running)
 npm run dev        # API on :3001 + web on http://localhost:5173 (also exposed on your LAN)
 npm test           # all workspaces
@@ -58,7 +59,7 @@ becomes host. Late joiners swipe the full deck; matches that already happened st
 ## Persistence
 
 Postgres holds sessions, members, swipes and matches (schema:
-[`001_init.sql`](apps/api/src/db/migrations/001_init.sql); migrations are plain SQL, applied in
+[`001_init.sql`](packages/db/src/migrations/001_init.sql); migrations are plain SQL, applied in
 order on startup or with `npm run db:migrate`).
 
 - **Atomic updates.** Each change loads the session with `SELECT … FOR UPDATE`, applies it in
@@ -81,13 +82,79 @@ If the cache is stale and the API fails (quota used up, network down), the stale
 no pool at all, the hard-coded recipes are. A session can always start. Every fetched recipe is also
 kept in `cards` with its diet facts (vegan, gluten-free, …), which Phase 5 uses as hard filters.
 
+## MCP servers
+
+Two [Model Context Protocol](https://modelcontextprotocol.io) servers give Claude (and, from
+Phase 6, the app's own agents) structured access to recipes and sessions. Each is a
+transport-agnostic `createXServer()` plus a small `stdio.ts` launcher.
+
+| Server               | Tool                | What it's for                                                                                           |
+| -------------------- | ------------------- | ------------------------------------------------------------------------------------------------------- |
+| `yumanimous-recipes` | `search_recipes`    | Filtered search: query, cuisine, `diets` (AND), `intolerances` (excluded), max time, type, 1–20 results |
+|                      | `get_recipe`        | Ingredients with amounts and supermarket aisle, numbered steps (for the Phase 7 cook plan)              |
+| `yumanimous-session` | `get_session`       | Match rule, status, members, who's online, swipe progress, matches                                      |
+|                      | `get_swipe_history` | Each member's yums and skips with card titles and tags (for re-ranking)                                 |
+|                      | `get_vote_tally`    | Per-card yums, skips and outcome under the session's rule, best first (for the no-match mediator)       |
+
+Design choices:
+
+- **Structured inputs only.** Filters are enums mirroring the recipe API (a model can't ask for a
+  diet the API doesn't know), counts are capped, ids are typed. No tool accepts SQL or a URL.
+  Every tool declares an output schema and returns `structuredContent`.
+- **`mcp-session` is read-only in the database, not just in code.** Its pool sets
+  `default_transaction_read_only=on`, so Postgres rejects any write (there's a test for it). Each
+  read runs in one `REPEATABLE READ` transaction, so a tally never mixes two moments. Rejoin token
+  hashes are never selected.
+- **Guest names are untrusted.** They only appear as JSON values, and every tool description tells
+  the model to treat them as data, never as instructions.
+- **Quota-aware.** Searches are cached for 7 days and recipe details for 30, in the same Postgres
+  `api_cache` the app uses; a stale entry is served if the API fails. Each call logs the points it
+  cost.
+- **stdout is the protocol.** On stdio, all logging goes to stderr.
+
+**Claude Code** picks both servers up from [`.mcp.json`](.mcp.json) when you open the repo (it asks
+once to approve project servers). They read `SPOONACULAR_API_KEY` and `DATABASE_URL` from `.env`,
+so no secret lives in the config. Try: _"In session ABC123, what has the group said yum to?"_
+
+**Claude Desktop** needs absolute paths. Add this to `claude_desktop_config.json` (Settings →
+Developer → Edit Config), replacing `C:/path/to/yumanimous`:
+
+```json
+{
+  "mcpServers": {
+    "yumanimous-recipes": {
+      "command": "node",
+      "args": [
+        "C:/path/to/yumanimous/node_modules/tsx/dist/cli.mjs",
+        "--env-file-if-exists=C:/path/to/yumanimous/.env",
+        "C:/path/to/yumanimous/packages/mcp-recipes/src/stdio.ts"
+      ]
+    },
+    "yumanimous-session": {
+      "command": "node",
+      "args": [
+        "C:/path/to/yumanimous/node_modules/tsx/dist/cli.mjs",
+        "--env-file-if-exists=C:/path/to/yumanimous/.env",
+        "C:/path/to/yumanimous/packages/mcp-session/src/stdio.ts"
+      ]
+    }
+  }
+}
+```
+
+**Smoke test without an MCP client:** `npm run mcp:smoke -- <SESSION_CODE>` starts each server
+exactly as `.mcp.json` describes, lists its tools and calls a few.
+
 ## Layout
 
-| Path              | What                                                                   |
-| ----------------- | ---------------------------------------------------------------------- |
-| `apps/web`        | React + Vite app: home, join, lobby, swipe deck, match screen, results |
-| `apps/api`        | Express + Socket.io + Postgres: sessions, presence, matches, recipes   |
-| `packages/shared` | Zod schemas, socket event types and pure match rules, used by both     |
+| Path                   | What                                                                      |
+| ---------------------- | ------------------------------------------------------------------------- |
+| `apps/web`             | React + Vite app: home, join, lobby, swipe deck, match screen, results    |
+| `apps/api`             | Express + Socket.io + Postgres: sessions, presence, matches, recipes      |
+| `packages/shared`      | Zod schemas, socket event types and pure match rules, used by both        |
+| `packages/db`          | Postgres schema (SQL migrations), pools, API cache, test database helpers |
+| `packages/mcp-recipes` | MCP server + Spoonacular client (also used by the API's deck source)      |
+| `packages/mcp-session` | Read-only MCP server over live sessions                                   |
 
 Inside `apps/api`, `SessionService` holds every session rule and has no HTTP or socket code;
 `http/` and `realtime/` are thin transports over it. `SessionStore` (in-memory or Postgres) and

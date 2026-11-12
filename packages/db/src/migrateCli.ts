@@ -2,6 +2,7 @@ import pg from 'pg';
 import { migrate } from './migrate.js';
 
 // `npm run db:migrate`. The API also migrates on startup; this is for running it on its own.
+// Reads DATABASE_URL from the repo-root .env.
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
   console.error('DATABASE_URL is not set (see .env.example).');

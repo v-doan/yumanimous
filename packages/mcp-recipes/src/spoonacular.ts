@@ -26,7 +26,148 @@ export const SpoonacularRecipeSchema = z.object({
 
 export type SpoonacularRecipe = z.infer<typeof SpoonacularRecipeSchema>;
 
+/** /recipes/{id}/information adds ingredients and steps on top of the search fields. */
+export const SpoonacularRecipeDetailsSchema = SpoonacularRecipeSchema.extend({
+  extendedIngredients: z
+    .array(
+      z.object({
+        name: z.string(),
+        original: z.string(),
+        amount: z.number(),
+        unit: z.string(),
+        aisle: z.string().nullish(),
+      }),
+    )
+    .default([]),
+  analyzedInstructions: z
+    .array(
+      z.object({
+        name: z.string().default(''),
+        steps: z.array(
+          z.object({
+            number: z.number().int(),
+            step: z.string(),
+            ingredients: z.array(z.object({ name: z.string() })).default([]),
+            equipment: z.array(z.object({ name: z.string() })).default([]),
+          }),
+        ),
+      }),
+    )
+    .default([]),
+});
+
+export type SpoonacularRecipeDetails = z.infer<typeof SpoonacularRecipeDetailsSchema>;
+
 const SearchResponseSchema = z.object({ results: z.array(z.unknown()) });
+
+// Allowed filter values, straight from Spoonacular's docs. Enums (not free text) so a
+// model can only ask for filters the API understands.
+export const DIETS = [
+  'gluten free',
+  'ketogenic',
+  'vegetarian',
+  'lacto-vegetarian',
+  'ovo-vegetarian',
+  'vegan',
+  'pescetarian',
+  'paleo',
+  'primal',
+  'low fodmap',
+  'whole30',
+] as const;
+
+export const INTOLERANCES = [
+  'dairy',
+  'egg',
+  'gluten',
+  'grain',
+  'peanut',
+  'seafood',
+  'sesame',
+  'shellfish',
+  'soy',
+  'sulfite',
+  'tree nut',
+  'wheat',
+] as const;
+
+export const CUISINES = [
+  'African',
+  'American',
+  'Asian',
+  'British',
+  'Cajun',
+  'Caribbean',
+  'Chinese',
+  'Eastern European',
+  'European',
+  'French',
+  'German',
+  'Greek',
+  'Indian',
+  'Irish',
+  'Italian',
+  'Japanese',
+  'Jewish',
+  'Korean',
+  'Latin American',
+  'Mediterranean',
+  'Mexican',
+  'Middle Eastern',
+  'Nordic',
+  'Southern',
+  'Spanish',
+  'Thai',
+  'Vietnamese',
+] as const;
+
+export const MEAL_TYPES = [
+  'main course',
+  'side dish',
+  'dessert',
+  'appetizer',
+  'salad',
+  'bread',
+  'breakfast',
+  'soup',
+  'beverage',
+  'sauce',
+  'marinade',
+  'fingerfood',
+  'snack',
+  'drink',
+] as const;
+
+/**
+ * Search filters. This one schema is both the client's input and the
+ * `search_recipes` MCP tool's input, so the tool can't accept anything the client
+ * wouldn't send. `.describe()` texts are what the model reads.
+ */
+export const RecipeSearchSchema = z.object({
+  query: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .optional()
+    .describe('Free-text dish search, e.g. "pasta" or "chicken curry".'),
+  cuisine: z.enum(CUISINES).optional(),
+  diets: z
+    .array(z.enum(DIETS))
+    .max(4)
+    .optional()
+    .describe('Every listed diet must be satisfied (AND). Use for hard dietary rules.'),
+  intolerances: z
+    .array(z.enum(INTOLERANCES))
+    .max(12)
+    .optional()
+    .describe('Recipes containing any of these are excluded.'),
+  maxReadyMinutes: z.number().int().min(5).max(600).optional(),
+  type: z.enum(MEAL_TYPES).default('main course'),
+  count: z.number().int().min(1).max(20).default(10).describe('How many recipes (1-20).'),
+});
+
+export type RecipeSearch = z.input<typeof RecipeSearchSchema>;
 
 /** Spoonacular bills in "points" per request; it reports usage in response headers. */
 export interface QuotaUsage {
@@ -52,7 +193,7 @@ export interface SpoonacularClientOptions {
   timeoutMs?: number;
 }
 
-/** Plain HTTP client. Phase 4 wraps the same calls in the `mcp-recipes` server. */
+/** Plain HTTP client, used by the API's deck source and by the MCP tools. */
 export class SpoonacularClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
@@ -71,21 +212,53 @@ export class SpoonacularClient {
     this.timeoutMs = timeoutMs;
   }
 
-  /** Popular main courses with full recipe info (diet flags, timing, credits). */
-  async searchMainCourses(
-    count: number,
+  /** Filtered search with full recipe info (diet flags, timing, credits). */
+  async searchRecipes(
+    search: RecipeSearch,
   ): Promise<{ recipes: SpoonacularRecipe[]; quota: QuotaUsage }> {
+    const f = RecipeSearchSchema.parse(search);
     const params = new URLSearchParams({
-      type: 'main course',
+      type: f.type,
       sort: 'popularity',
-      number: String(count),
+      number: String(f.count),
       addRecipeInformation: 'true',
       instructionsRequired: 'true',
     });
+    if (f.query) params.set('query', f.query);
+    if (f.cuisine) params.set('cuisine', f.cuisine);
+    // Spoonacular reads a comma as AND for diets and as "exclude any" for intolerances.
+    if (f.diets?.length) params.set('diet', f.diets.join(','));
+    if (f.intolerances?.length) params.set('intolerances', f.intolerances.join(','));
+    if (f.maxReadyMinutes) params.set('maxReadyTime', String(f.maxReadyMinutes));
 
+    const { body, quota } = await this.get(`/recipes/complexSearch?${params}`);
+    const results = SearchResponseSchema.parse(body).results;
+    const recipes = results.flatMap((raw) => {
+      const parsed = SpoonacularRecipeSchema.safeParse(raw);
+      return parsed.success ? [parsed.data] : [];
+    });
+    return { recipes, quota };
+  }
+
+  /** Popular main courses: the deck source's pool. */
+  searchMainCourses(count: number) {
+    return this.searchRecipes({ type: 'main course', count });
+  }
+
+  /** One recipe with ingredients and steps (about 1 quota point). */
+  async getRecipe(
+    recipeId: number,
+  ): Promise<{ recipe: SpoonacularRecipeDetails; quota: QuotaUsage }> {
+    const { body, quota } = await this.get(
+      `/recipes/${encodeURIComponent(recipeId)}/information?includeNutrition=false`,
+    );
+    return { recipe: SpoonacularRecipeDetailsSchema.parse(body), quota };
+  }
+
+  private async get(path: string): Promise<{ body: unknown; quota: QuotaUsage }> {
     let res: Response;
     try {
-      res = await this.fetch(`${this.baseUrl}/recipes/complexSearch?${params}`, {
+      res = await this.fetch(`${this.baseUrl}${path}`, {
         // Header, not a query parameter, so the key never ends up in URL logs.
         headers: { 'x-api-key': this.apiKey },
         signal: AbortSignal.timeout(this.timeoutMs),
@@ -93,15 +266,9 @@ export class SpoonacularClient {
     } catch (err) {
       throw new RecipeApiError(0, `Recipe API unreachable: ${(err as Error).message}`);
     }
-    // 402 = daily quota used up, 401 = bad key. Callers fall back either way.
+    // 402 = daily quota used up, 401 = bad key, 404 = no such recipe.
     if (!res.ok) throw new RecipeApiError(res.status, `Recipe API responded ${res.status}`);
-
-    const body = SearchResponseSchema.parse(await res.json());
-    const recipes = body.results.flatMap((raw) => {
-      const parsed = SpoonacularRecipeSchema.safeParse(raw);
-      return parsed.success ? [parsed.data] : [];
-    });
-    return { recipes, quota: readQuota(res.headers) };
+    return { body: await res.json(), quota: readQuota(res.headers) };
   }
 }
 
@@ -118,17 +285,19 @@ function readQuota(headers: Headers): QuotaUsage {
 }
 
 /** Facts kept next to each card for later phases (diet filters are hard rules in Phase 5). */
-export interface RecipeFacts {
-  vegetarian: boolean;
-  vegan: boolean;
-  glutenFree: boolean;
-  dairyFree: boolean;
-  diets: string[];
-  cuisines: string[];
-  readyInMinutes: number | null;
-  servings: number | null;
-  license: string | null;
-}
+export const RecipeFactsSchema = z.object({
+  vegetarian: z.boolean(),
+  vegan: z.boolean(),
+  glutenFree: z.boolean(),
+  dairyFree: z.boolean(),
+  diets: z.array(z.string()),
+  cuisines: z.array(z.string()),
+  readyInMinutes: z.number().int().nullable(),
+  servings: z.number().int().nullable(),
+  license: z.string().nullable(),
+});
+
+export type RecipeFacts = z.infer<typeof RecipeFactsSchema>;
 
 export interface MappedRecipe {
   card: Card;

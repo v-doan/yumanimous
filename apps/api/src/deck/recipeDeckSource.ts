@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CardSchema, type Card } from '@yumanimous/shared';
-import type { ApiCache, CardCatalog } from '../cache/caches.js';
-import { toCard, type SpoonacularClient } from '../recipes/spoonacular.js';
+import type { ApiCache, CardCatalog } from '@yumanimous/db';
+import { toCard, type SpoonacularClient } from '@yumanimous/mcp-recipes';
 import type { DeckSource } from './deckSource.js';
 
 const DAY = 24 * 60 * 60_000;

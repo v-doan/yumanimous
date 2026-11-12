@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Card } from '@yumanimous/shared';
 import type { DeckSource } from '../deck/deckSource.js';
 import { SessionService, type SessionEvent } from './sessionService.js';
-import { createTestDatabase, databaseUrl } from '../test/testDatabase.js';
+import { createTestDatabase, databaseUrl } from '@yumanimous/db/testing';
 import { PostgresSessionStore } from './postgresSessionStore.js';
 import { InMemorySessionStore, type SessionStore } from './sessionStore.js';
 
