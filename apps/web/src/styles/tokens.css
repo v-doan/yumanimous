@@ -1,0 +1,48 @@
+/*
+ * Design tokens: the single source of truth for colours, type, radii and spacing.
+ * Components only reference these variables, never raw hex values.
+ */
+:root {
+  /* Colour */
+  --color-bg: #fbfaf7;
+  --color-surface: #ffffff;
+  --color-text: #1a1a1a;
+  --color-text-secondary: #5c5c5c;
+  --color-accent: #b42f35;
+  --color-green: #1f6b46;
+  --color-border: #e4e1da;
+  --color-chip: #edeae3;
+  --color-on-accent: #ffffff;
+
+  /* Type */
+  --font-heading: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-heading-weight: 800;
+  --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.25rem;
+
+  /* Shape */
+  --radius-card: 24px;
+  --radius-pill: 999px;
+
+  /* Spacing (4px scale) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Elevation */
+  --shadow-card: 0 1px 2px rgb(26 26 26 / 0.06), 0 8px 24px rgb(26 26 26 / 0.08);
+  --shadow-button: 0 1px 2px rgb(26 26 26 / 0.08);
+
+  /* Sizing */
+  --tap-target: 56px;
+  --content-max-width: 440px;
+}

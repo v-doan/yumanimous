@@ -1,0 +1,101 @@
+.card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  /* We own every touch on the card: no browser scrolling, zooming or back-swipe. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: grab;
+  /* Pivot low so the cards behind (scaled down) still peek out at the bottom. */
+  transform-origin: 50% 85%;
+  will-change: transform;
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+.media {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: var(--color-chip);
+}
+
+.stamp {
+  position: absolute;
+  top: var(--space-6);
+  padding: var(--space-1) var(--space-3);
+  border: 3px solid currentColor;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.85);
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: var(--text-xl);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.stamp-like {
+  left: var(--space-5);
+  color: var(--color-green);
+  rotate: -12deg;
+}
+
+.stamp-nope {
+  right: var(--space-5);
+  color: var(--color-accent);
+  rotate: 12deg;
+}
+
+.body {
+  flex: 0 0 auto;
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.title {
+  font-size: var(--text-xl);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-chip);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.blurb {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.credit {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+.credit a {
+  color: inherit;
+}

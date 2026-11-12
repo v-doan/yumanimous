@@ -1,0 +1,25 @@
+.image,
+.placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.image {
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.placeholder {
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  background:
+    radial-gradient(circle at 25% 20%, rgb(255 255 255 / 0.7), transparent 55%), var(--color-chip);
+  color: var(--color-text);
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: var(--text-2xl);
+  line-height: 1.05;
+  text-align: center;
+}
