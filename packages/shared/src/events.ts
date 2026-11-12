@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { SessionCodeSchema, type SessionView } from './session.js';
+import type { MemberPreferences } from './preferences.js';
 import type { SwipeInput } from './swipe.js';
 
 /**
@@ -23,6 +24,13 @@ export interface ClientToServerEvents {
   swipe: (input: SwipeInput, ack: Ack) => void;
   /** Host only: lobby -> swiping. */
   'session:start': (ack: Ack) => void;
+  /** Save this member's confirmed food rules (validated again on the server). */
+  'preferences:set': (preferences: MemberPreferences, ack: Ack) => void;
+  /**
+   * Host only, while swiping: rebuild the deck with everyone's current rules. Clears
+   * all votes and matches, because they were cast on a different deck.
+   */
+  'session:rebuild': (ack: Ack) => void;
   /** Leave for good: the member and their votes are removed. */
   'session:leave': (ack: Ack) => void;
 }

@@ -3,10 +3,15 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type pg from 'pg';
 import { z } from 'zod';
 import {
+  AttributedRuleSchema,
   evaluateCard,
+  HardFiltersSchema,
   matchRules,
   MatchRuleIdSchema,
+  MemberPreferencesSchema,
+  mergePreferences,
   SessionCodeSchema,
+  uncoveredRules,
   type CardOutcome,
 } from '@yumanimous/shared';
 import { loadSnapshot, type SessionSnapshot } from './readModel.js';
@@ -69,6 +74,31 @@ export const TallyOutputSchema = z.object({
       outcome: z.enum(['match', 'no-match', 'undecided']),
     }),
   ),
+});
+
+export const PreferencesOutputSchema = z.object({
+  code: z.string(),
+  members: z.array(
+    z.object({
+      memberId: z.string(),
+      name: z.string(),
+      preferences: MemberPreferencesSchema.nullable(),
+    }),
+  ),
+  group: z.object({
+    /** Everyone's hard rules combined: every card must satisfy all of these. */
+    hard: HardFiltersSchema,
+    soft: z.object({
+      cuisineScores: z.record(z.string(), z.number()),
+      dislikedIngredients: z.array(z.string()),
+      cravings: z.array(z.string()),
+    }),
+    unsupported: z.array(AttributedRuleSchema),
+  }),
+  /** What the current deck was filtered for; null in the lobby. */
+  deckFilters: HardFiltersSchema.nullable(),
+  /** Members' hard rules the current deck was NOT filtered for. */
+  uncovered: z.array(AttributedRuleSchema),
 });
 
 /**
@@ -197,6 +227,42 @@ export function createSessionServer({ pool }: { pool: pg.Pool }) {
           .map(({ deckIndex: _deckIndex, ...card }) => card);
 
         return { code: s.code, matchRule: s.matchRule, memberCount: memberIds.length, cards };
+      }),
+  );
+
+  server.registerTool(
+    'get_member_preferences',
+    {
+      title: 'Get member food rules',
+      description: `Each member's confirmed food rules and the group's combined rules. "hard" rules (diets, intolerances, excluded ingredients, time limit) are restrictions: every suggested recipe must satisfy ALL of them, for the whole group. "soft" ones are taste preferences for ranking. "unsupported" rules (e.g. halal) can't be filtered by the recipe API; never claim a recipe satisfies them. ${UNTRUSTED_NAMES}`,
+      inputSchema: { code: codeInput },
+      outputSchema: PreferencesOutputSchema.shape,
+      annotations,
+    },
+    async ({ code }) =>
+      withSession(code, (s) => {
+        // The same pure merge the API uses to build the deck.
+        const group = mergePreferences(s.members);
+        const uncovered = new Map<string, string[]>();
+        if (s.deckFilters) {
+          for (const m of s.members) {
+            if (!m.preferences) continue;
+            for (const rule of uncoveredRules(mergePreferences([m]).hard, s.deckFilters)) {
+              uncovered.set(rule, [...(uncovered.get(rule) ?? []), m.name]);
+            }
+          }
+        }
+        return {
+          code: s.code,
+          members: s.members.map((m) => ({
+            memberId: m.id,
+            name: m.name,
+            preferences: m.preferences,
+          })),
+          group,
+          deckFilters: s.deckFilters,
+          uncovered: [...uncovered].map(([rule, members]) => ({ rule, members })),
+        };
       }),
   );
 

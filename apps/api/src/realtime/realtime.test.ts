@@ -142,6 +142,56 @@ describe('a two-person session', () => {
   });
 });
 
+describe('food rules', () => {
+  const vegan = {
+    diets: ['vegan'],
+    intolerances: [],
+    avoidIngredients: [],
+    maxReadyMinutes: null,
+    cuisinesLiked: [],
+    cuisinesDisliked: [],
+    cravings: [],
+    unsupported: [],
+  };
+
+  it('saves a member’s rules and shows them to the group', async () => {
+    const hostM = await createSession();
+    const { client: host } = await connectAs(hostM);
+    const guestM = await joinSession(hostM.code, 'Sam');
+    const { client: guest } = await connectAs(guestM);
+
+    const hostSees = waitForState(host, (v) =>
+      v.members.some((m) => m.id === guestM.memberId && m.preferences?.diets[0] === 'vegan'),
+    );
+    expect(await guest.emitWithAck('preferences:set', vegan as never)).toEqual({ ok: true });
+    await hostSees;
+  });
+
+  it('rejects rules outside the allowed values', async () => {
+    const hostM = await createSession();
+    const { client } = await connectAs(hostM);
+    const bad = { ...vegan, diets: ['carnivore'] };
+    expect(await client.emitWithAck('preferences:set', bad as never)).toEqual({
+      ok: false,
+      error: 'Invalid input',
+    });
+  });
+
+  it('lets only the host rebuild the deck', async () => {
+    const hostM = await createSession();
+    const guestM = await joinSession(hostM.code, 'Sam');
+    const { client: host } = await connectAs(hostM);
+    const { client: guest } = await connectAs(guestM);
+    await host.emitWithAck('session:start');
+
+    expect(await guest.emitWithAck('session:rebuild')).toEqual({
+      ok: false,
+      error: 'Only the host can rebuild the deck',
+    });
+    expect(await host.emitWithAck('session:rebuild')).toEqual({ ok: true });
+  });
+});
+
 describe('presence', () => {
   it('a refresh within the grace period keeps the member and their swipes', async () => {
     const hostM = await createSession();

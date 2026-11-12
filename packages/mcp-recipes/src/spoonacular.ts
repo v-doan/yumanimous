@@ -1,5 +1,16 @@
 import { z } from 'zod';
-import { CardSchema, type Card } from '@yumanimous/shared';
+import {
+  CardSchema,
+  CUISINES,
+  DIETS,
+  IngredientNameSchema,
+  INTOLERANCES,
+  type Card,
+} from '@yumanimous/shared';
+
+// Diet, intolerance and cuisine values live in @yumanimous/shared (they mirror
+// Spoonacular's own lists); re-exported here for callers of this client.
+export { CUISINES, DIETS, INTOLERANCES };
 
 /**
  * Only the fields we use. Unknown fields are ignored, and each recipe is validated
@@ -60,67 +71,6 @@ export type SpoonacularRecipeDetails = z.infer<typeof SpoonacularRecipeDetailsSc
 
 const SearchResponseSchema = z.object({ results: z.array(z.unknown()) });
 
-// Allowed filter values, straight from Spoonacular's docs. Enums (not free text) so a
-// model can only ask for filters the API understands.
-export const DIETS = [
-  'gluten free',
-  'ketogenic',
-  'vegetarian',
-  'lacto-vegetarian',
-  'ovo-vegetarian',
-  'vegan',
-  'pescetarian',
-  'paleo',
-  'primal',
-  'low fodmap',
-  'whole30',
-] as const;
-
-export const INTOLERANCES = [
-  'dairy',
-  'egg',
-  'gluten',
-  'grain',
-  'peanut',
-  'seafood',
-  'sesame',
-  'shellfish',
-  'soy',
-  'sulfite',
-  'tree nut',
-  'wheat',
-] as const;
-
-export const CUISINES = [
-  'African',
-  'American',
-  'Asian',
-  'British',
-  'Cajun',
-  'Caribbean',
-  'Chinese',
-  'Eastern European',
-  'European',
-  'French',
-  'German',
-  'Greek',
-  'Indian',
-  'Irish',
-  'Italian',
-  'Japanese',
-  'Jewish',
-  'Korean',
-  'Latin American',
-  'Mediterranean',
-  'Mexican',
-  'Middle Eastern',
-  'Nordic',
-  'Southern',
-  'Spanish',
-  'Thai',
-  'Vietnamese',
-] as const;
-
 export const MEAL_TYPES = [
   'main course',
   'side dish',
@@ -154,7 +104,7 @@ export const RecipeSearchSchema = z.object({
   cuisine: z.enum(CUISINES).optional(),
   diets: z
     .array(z.enum(DIETS))
-    .max(4)
+    .max(6)
     .optional()
     .describe('Every listed diet must be satisfied (AND). Use for hard dietary rules.'),
   intolerances: z
@@ -162,9 +112,15 @@ export const RecipeSearchSchema = z.object({
     .max(12)
     .optional()
     .describe('Recipes containing any of these are excluded.'),
+  excludeIngredients: z
+    .array(IngredientNameSchema)
+    .max(10)
+    .optional()
+    .describe('Ingredients that must not appear, e.g. ["kiwi", "pork"].'),
   maxReadyMinutes: z.number().int().min(5).max(600).optional(),
   type: z.enum(MEAL_TYPES).default('main course'),
-  count: z.number().int().min(1).max(20).default(10).describe('How many recipes (1-20).'),
+  // Spoonacular's own maximum. The MCP tool narrows this to 20 for model calls.
+  count: z.number().int().min(1).max(100).default(10).describe('How many recipes.'),
 });
 
 export type RecipeSearch = z.input<typeof RecipeSearchSchema>;
@@ -229,6 +185,8 @@ export class SpoonacularClient {
     // Spoonacular reads a comma as AND for diets and as "exclude any" for intolerances.
     if (f.diets?.length) params.set('diet', f.diets.join(','));
     if (f.intolerances?.length) params.set('intolerances', f.intolerances.join(','));
+    if (f.excludeIngredients?.length)
+      params.set('excludeIngredients', f.excludeIngredients.join(','));
     if (f.maxReadyMinutes) params.set('maxReadyTime', String(f.maxReadyMinutes));
 
     const { body, quota } = await this.get(`/recipes/complexSearch?${params}`);

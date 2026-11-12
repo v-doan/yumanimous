@@ -25,6 +25,11 @@ export function MemberList({ view, myId }: { view: SessionView; myId: string }) 
               {m.id === myId && ' (you)'}
             </span>
             {m.isHost && <span className={ui.badge}>host</span>}
+            {m.preferences && (
+              <span className={ui.badge} title="Has food rules">
+                rules ✓
+              </span>
+            )}
             <span className={styles.status}>
               {view.status === 'swiping' && !done && `${m.swipedCount}/${total} · `}
               {status}

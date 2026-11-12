@@ -2,13 +2,19 @@ import {
   MAX_MEMBERS,
   matchRules,
   evaluateCard,
+  mergePreferences,
+  uncoveredRules,
+  type AttributedRule,
+  type Card,
+  type HardFilters,
   type MatchRuleId,
+  type MemberPreferences,
   type Membership,
   type SessionPreview,
   type SessionView,
   type SwipeInput,
 } from '@yumanimous/shared';
-import type { DeckSource } from '../deck/deckSource.js';
+import { DeckError, type DeckSource } from '../deck/deckSource.js';
 import {
   generateMemberId,
   generateSessionCode,
@@ -19,7 +25,15 @@ import {
 import type { SessionStore, StoredMember, StoredSession } from './sessionStore.js';
 
 export type SessionErrorCode =
-  'not_found' | 'full' | 'name_taken' | 'not_host' | 'not_member' | 'not_started' | 'unknown_card';
+  | 'not_found'
+  | 'full'
+  | 'name_taken'
+  | 'not_host'
+  | 'not_member'
+  | 'not_started'
+  | 'already_started'
+  | 'unknown_card'
+  | 'deck_unavailable';
 
 /** An expected, user-facing failure. Its message is safe to show to clients. */
 export class SessionError extends Error {
@@ -70,8 +84,8 @@ export class SessionService {
     return () => this.listeners.delete(listener);
   }
 
+  /** The deck isn't built yet: it waits for everyone's food rules, at the start. */
   async create(input: { hostName: string; matchRule: MatchRuleId }): Promise<Membership> {
-    const deck = await this.deckSource.buildDeck();
     const token = generateToken();
     const host = this.newMember(input.hostName, token);
 
@@ -83,7 +97,8 @@ export class SessionService {
         matchRule: input.matchRule,
         status: 'lobby',
         hostId: host.id,
-        deck,
+        deck: [],
+        deckFilters: null,
         members: [host],
         swipes: [],
         matches: [],
@@ -139,12 +154,59 @@ export class SessionService {
     return toView(await this.require(code));
   }
 
-  async start(code: string, memberId: string): Promise<void> {
+  /** Saves a member's confirmed food rules. Allowed in the lobby and mid-session. */
+  async setPreferences(
+    code: string,
+    memberId: string,
+    preferences: MemberPreferences,
+  ): Promise<void> {
     await this.update(code, (session) => {
-      if (session.hostId !== memberId) {
-        throw new SessionError('not_host', 'Only the host can start');
+      requireMember(session, memberId).preferences = preferences;
+    });
+  }
+
+  /**
+   * Host only: build the deck from everyone's merged rules, then open swiping. Any
+   * member's dietary restriction is a hard filter for the whole group.
+   */
+  async start(code: string, memberId: string): Promise<void> {
+    const session = await this.require(code);
+    requireHost(session, memberId, 'Only the host can start');
+    if (session.status !== 'lobby') {
+      throw new SessionError('already_started', 'This session has already started');
+    }
+    const { deck, filters } = await this.buildDeck(session);
+
+    await this.update(code, (current) => {
+      // Re-checked under the lock: the deck build above took a moment.
+      requireHost(current, memberId, 'Only the host can start');
+      if (current.status !== 'lobby') {
+        throw new SessionError('already_started', 'This session has already started');
       }
-      session.status = 'swiping';
+      current.deck = deck;
+      current.deckFilters = filters;
+      current.status = 'swiping';
+    });
+  }
+
+  /**
+   * Host only, mid-session: a fresh deck for everyone's current rules (e.g. a late
+   * joiner's allergy). Votes and matches go too: they were cast on another deck.
+   */
+  async rebuildDeck(code: string, memberId: string): Promise<void> {
+    const session = await this.require(code);
+    requireHost(session, memberId, 'Only the host can rebuild the deck');
+    if (session.status !== 'swiping') {
+      throw new SessionError('not_started', 'The host has not started yet');
+    }
+    const { deck, filters } = await this.buildDeck(session);
+
+    await this.update(code, (current) => {
+      requireHost(current, memberId, 'Only the host can rebuild the deck');
+      current.deck = deck;
+      current.deckFilters = filters;
+      current.swipes = [];
+      current.matches = [];
     });
   }
 
@@ -270,7 +332,19 @@ export class SessionService {
       joinedAt: this.now(),
       // Joining is a REST call; the member counts as online once their socket connects.
       disconnectedAt: this.now(),
+      preferences: null,
     };
+  }
+
+  /** Runs outside the session lock: it may call the recipe API. */
+  private async buildDeck(session: StoredSession): Promise<{ deck: Card[]; filters: HardFilters }> {
+    const group = mergePreferences(session.members);
+    try {
+      return { deck: await this.deckSource.buildDeck(group), filters: group.hard };
+    } catch (err) {
+      if (err instanceof DeckError) throw new SessionError('deck_unavailable', err.message);
+      throw err;
+    }
   }
 
   private async require(code: string): Promise<StoredSession> {
@@ -340,6 +414,10 @@ export class SessionService {
   }
 }
 
+function requireHost(session: StoredSession, memberId: string, message: string) {
+  if (session.hostId !== memberId) throw new SessionError('not_host', message);
+}
+
 function requireMember(session: StoredSession, memberId: string): StoredMember {
   const member = session.members.find((m) => m.id === memberId);
   if (!member) throw new SessionError('not_member', 'You are not in this session');
@@ -373,6 +451,7 @@ export function toView(session: StoredSession): SessionView {
     name: m.name,
     isHost: m.id === session.hostId,
     connected: m.disconnectedAt === null,
+    preferences: m.preferences,
     swipedCount: swipedCount(m.id),
     joinedAt: m.joinedAt,
   }));
@@ -390,5 +469,20 @@ export function toView(session: StoredSession): SessionView {
       session.status === 'swiping' &&
       members.length > 0 &&
       members.every((m) => m.swipedCount === session.deck.length),
+    deckFilters: session.deckFilters,
+    uncovered: session.deckFilters ? uncoveredFor(session, session.deckFilters) : [],
   };
+}
+
+/** Each member's hard rules the deck wasn't built with, grouped by rule. */
+function uncoveredFor(session: StoredSession, deckFilters: HardFilters): AttributedRule[] {
+  const byRule = new Map<string, string[]>();
+  for (const member of session.members) {
+    if (!member.preferences) continue;
+    const own = mergePreferences([member]).hard;
+    for (const rule of uncoveredRules(own, deckFilters)) {
+      byRule.set(rule, [...(byRule.get(rule) ?? []), member.name]);
+    }
+  }
+  return [...byRule].map(([rule, members]) => ({ rule, members }));
 }

@@ -64,6 +64,14 @@ export type RecipeDetails = z.infer<typeof RecipeDetailsSchema>;
 
 const GetRecipeOutputSchema = z.object({ recipe: RecipeDetailsSchema, cached: z.boolean() });
 
+/**
+ * The tool's input: the client's filters, with a lower result cap. A model asking
+ * for 100 recipes would burn quota and context for no benefit.
+ */
+const ToolSearchSchema = RecipeSearchSchema.extend({
+  count: z.number().int().min(1).max(20).default(10).describe('How many recipes (1-20).'),
+});
+
 export interface RecipesServerDeps {
   /** null when no API key is configured: cached results still work. */
   client: SpoonacularClient | null;
@@ -87,12 +95,12 @@ export function createRecipesServer({ client, cache, log = console.error }: Reci
         'Find recipes that fit the given filters. Dietary restrictions go in `diets` and ' +
         '`intolerances`: those are hard filters applied by the recipe API, not suggestions. ' +
         'Results are cached for a week, so repeating a search is free.',
-      inputSchema: RecipeSearchSchema.shape,
+      inputSchema: ToolSearchSchema.shape,
       outputSchema: SearchOutputSchema.shape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (input) => {
-      const search = RecipeSearchSchema.parse(input);
+      const search = ToolSearchSchema.parse(input);
       return cached(
         `spoonacular:search:v1:${stableKey(search)}`,
         SEARCH_TTL_MS,

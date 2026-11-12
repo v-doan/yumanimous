@@ -8,23 +8,25 @@ import { Results } from './Results';
 
 describe('Lobby', () => {
   const lobby = sessionView({ status: 'lobby' });
+  const noop = async () => {};
+  const save = async () => true;
 
   it('shows the code and everyone who has joined', () => {
-    render(<Lobby view={lobby} myId="sam" onStart={() => {}} />);
+    render(<Lobby view={lobby} myId="sam" onStart={noop} onSavePreferences={save} />);
     expect(screen.getByText('ABCDEF')).toBeInTheDocument();
     expect(screen.getByText('Here so far (2)')).toBeInTheDocument();
     expect(screen.getByText('Sam (you)')).toBeInTheDocument();
   });
 
   it('lets the host start', async () => {
-    const onStart = vi.fn();
-    render(<Lobby view={lobby} myId="vy" onStart={onStart} />);
+    const onStart = vi.fn(noop);
+    render(<Lobby view={lobby} myId="vy" onStart={onStart} onSavePreferences={save} />);
     await userEvent.click(screen.getByRole('button', { name: 'Start swiping' }));
     expect(onStart).toHaveBeenCalledOnce();
   });
 
   it('tells guests who they are waiting for', () => {
-    render(<Lobby view={lobby} myId="sam" onStart={() => {}} />);
+    render(<Lobby view={lobby} myId="sam" onStart={noop} onSavePreferences={save} />);
     expect(screen.queryByRole('button', { name: /start/i })).not.toBeInTheDocument();
     expect(screen.getByText('Waiting for Vy to start…')).toBeInTheDocument();
   });

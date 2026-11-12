@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { CardSchema } from './card.js';
 import { MatchRuleIdSchema } from './matchRules.js';
 import { GuestNameSchema, MemberIdSchema, MemberSchema } from './member.js';
+import { AttributedRuleSchema, HardFiltersSchema } from './preferences.js';
 import { SwipeSchema } from './swipe.js';
 
 /**
@@ -51,6 +52,13 @@ export const SessionViewSchema = z.object({
   matches: z.array(MatchSchema),
   /** True once every current member has swiped every card. */
   finished: z.boolean(),
+  /** The hard filters the current deck was built with (null in the lobby). */
+  deckFilters: HardFiltersSchema.nullable(),
+  /**
+   * Members' hard rules the current deck was NOT filtered for, e.g. a late joiner's
+   * peanut allergy. Shown as a warning; the host can rebuild the deck.
+   */
+  uncovered: z.array(AttributedRuleSchema),
 });
 
 export type SessionView = z.infer<typeof SessionViewSchema>;

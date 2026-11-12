@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MemberPreferencesSchema } from './preferences.js';
 
 // Control characters and bidi overrides. The overrides (U+202A-202E, U+2066-2069)
 // can make a name render backwards to spoof another member, so they are rejected.
@@ -26,6 +27,11 @@ export const MemberSchema = z.object({
   connected: z.boolean(),
   /** How many cards this member has swiped, for the "who is still swiping" view. */
   swipedCount: z.number().int().min(0),
+  /**
+   * Confirmed food rules, or null if not set. Shared with the group on purpose: the
+   * deck is filtered for everyone's rules, so everyone can see why.
+   */
+  preferences: MemberPreferencesSchema.nullable(),
   joinedAt: z.number().int(),
 });
 

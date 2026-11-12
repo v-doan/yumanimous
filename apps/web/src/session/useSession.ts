@@ -3,6 +3,7 @@ import { io, type Socket } from 'socket.io-client';
 import type {
   AckResult,
   ClientToServerEvents,
+  MemberPreferences,
   Membership,
   ServerToClientEvents,
   SessionView,
@@ -89,6 +90,18 @@ export function useSession(membership: Membership) {
     if (result && !result.ok) setError(result.error);
   }, []);
 
+  /** Resolves true when saved, so the panel can show "Saved". */
+  const setPreferences = useCallback(async (preferences: MemberPreferences) => {
+    const result = await socketRef.current?.emitWithAck('preferences:set', preferences);
+    if (result && !result.ok) setError(result.error);
+    return result?.ok ?? false;
+  }, []);
+
+  const rebuild = useCallback(async () => {
+    const result = await socketRef.current?.emitWithAck('session:rebuild');
+    if (result && !result.ok) setError(result.error);
+  }, []);
+
   const leave = useCallback(() => {
     socketRef.current?.emit('session:leave', () => {});
     clearIdentity(code);
@@ -107,6 +120,8 @@ export function useSession(membership: Membership) {
     error,
     swipe,
     start,
+    setPreferences,
+    rebuild,
     leave,
     dismissMatch,
     clearError,

@@ -1,6 +1,9 @@
 import type pg from 'pg';
 import {
   CardSchema,
+  HardFiltersSchema,
+  MemberPreferencesSchema,
+  type Card,
   type Match,
   type MatchRuleId,
   type SessionMode,
@@ -29,8 +32,8 @@ export class PostgresSessionStore implements SessionStore {
   async create(session: StoredSession) {
     return this.transaction(async (db) => {
       const inserted = await db.query(
-        `INSERT INTO sessions (code, mode, match_rule, status, host_id, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO sessions (code, mode, match_rule, status, host_id, deck_filters, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          ON CONFLICT (code) DO NOTHING`,
         [
           session.code,
@@ -38,23 +41,13 @@ export class PostgresSessionStore implements SessionStore {
           session.matchRule,
           session.status,
           session.hostId,
+          session.deckFilters,
           toDate(session.updatedAt),
         ],
       );
       if (inserted.rowCount === 0) return false; // Code already taken.
 
-      for (const [position, card] of session.deck.entries()) {
-        // The deck source may already have cached this card; that row wins.
-        await db.query(
-          `INSERT INTO cards (id, source, card) VALUES ($1, $2, $3)
-           ON CONFLICT (id) DO NOTHING`,
-          [card.id, cardSource(card.id), card],
-        );
-        await db.query(
-          'INSERT INTO session_cards (session_code, position, card_id) VALUES ($1, $2, $3)',
-          [session.code, position, card.id],
-        );
-      }
+      await writeDeck(db, session.code, session.deck);
       for (const member of session.members) await insertMember(db, session.code, member);
       return true;
     });
@@ -128,6 +121,7 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
     match_rule: MatchRuleId;
     status: SessionStatus;
     host_id: string;
+    deck_filters: unknown;
     updated_at: Date;
   }>(`SELECT * FROM sessions WHERE code = $1 ${forUpdate ? 'FOR UPDATE' : ''}`, [code]);
   const row = session.rows[0];
@@ -146,9 +140,11 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
     token_hash: string;
     joined_at: Date;
     disconnected_at: Date | null;
+    preferences: unknown;
   }>(
-    `SELECT id, name, token_hash, joined_at, disconnected_at FROM members
-       WHERE session_code = $1 ORDER BY seq`,
+    `SELECT m.id, m.name, m.token_hash, m.joined_at, m.disconnected_at, p.preferences
+       FROM members m LEFT JOIN member_preferences p ON p.member_id = m.id
+       WHERE m.session_code = $1 ORDER BY m.seq`,
     [code],
   );
   const swipes = await db.query<{
@@ -171,12 +167,14 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
     hostId: row.host_id,
     // jsonb comes back as plain JSON; re-validate so a bad row can't reach clients.
     deck: deck.rows.map((r) => CardSchema.parse(r.card)),
+    deckFilters: row.deck_filters === null ? null : HardFiltersSchema.parse(row.deck_filters),
     members: members.rows.map((m) => ({
       id: m.id,
       name: m.name,
       tokenHash: m.token_hash,
       joinedAt: m.joined_at.getTime(),
       disconnectedAt: toMs(m.disconnected_at),
+      preferences: m.preferences === null ? null : MemberPreferencesSchema.parse(m.preferences),
     })),
     swipes: swipes.rows.map((s) => ({
       cardId: s.card_id,
@@ -192,8 +190,23 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
   return stored;
 }
 
-function insertMember(db: Queryable, code: string, m: StoredMember) {
-  return db.query(
+async function writeDeck(db: Queryable, code: string, deck: Card[]) {
+  for (const [position, card] of deck.entries()) {
+    // The deck source may already have cached this card (with its facts); that row wins.
+    await db.query(
+      `INSERT INTO cards (id, source, card) VALUES ($1, $2, $3)
+       ON CONFLICT (id) DO NOTHING`,
+      [card.id, cardSource(card.id), card],
+    );
+    await db.query(
+      'INSERT INTO session_cards (session_code, position, card_id) VALUES ($1, $2, $3)',
+      [code, position, card.id],
+    );
+  }
+}
+
+async function insertMember(db: Queryable, code: string, m: StoredMember) {
+  await db.query(
     `INSERT INTO members (id, session_code, name, token_hash, joined_at, disconnected_at)
      VALUES ($1, $2, $3, $4, $5, $6)`,
     [
@@ -205,37 +218,81 @@ function insertMember(db: Queryable, code: string, m: StoredMember) {
       m.disconnectedAt === null ? null : toDate(m.disconnectedAt),
     ],
   );
+  if (m.preferences) await writePreferences(db, m);
 }
+
+async function writePreferences(db: Queryable, m: StoredMember) {
+  if (m.preferences === null) {
+    await db.query('DELETE FROM member_preferences WHERE member_id = $1', [m.id]);
+    return;
+  }
+  await db.query(
+    `INSERT INTO member_preferences (member_id, preferences, updated_at) VALUES ($1, $2, now())
+     ON CONFLICT (member_id) DO UPDATE
+       SET preferences = excluded.preferences, updated_at = excluded.updated_at`,
+    [m.id, m.preferences],
+  );
+}
+
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 /** Writes only what changed between two versions of a session. */
 async function persistDiff(db: pg.PoolClient, before: StoredSession, after: StoredSession) {
   await db.query(
-    'UPDATE sessions SET status = $2, host_id = $3, match_rule = $4, updated_at = $5 WHERE code = $1',
-    [after.code, after.status, after.hostId, after.matchRule, toDate(after.updatedAt)],
+    `UPDATE sessions SET status = $2, host_id = $3, match_rule = $4, deck_filters = $5,
+       updated_at = $6 WHERE code = $1`,
+    [
+      after.code,
+      after.status,
+      after.hostId,
+      after.matchRule,
+      after.deckFilters,
+      toDate(after.updatedAt),
+    ],
   );
+
+  // A new deck (the start, or a host rebuild) replaces the old one wholesale.
+  const deckIds = (s: StoredSession) => s.deck.map((c) => c.id).join('|');
+  if (deckIds(before) !== deckIds(after)) {
+    await db.query('DELETE FROM session_cards WHERE session_code = $1', [after.code]);
+    await writeDeck(db, after.code, after.deck);
+  }
 
   const beforeMembers = new Map(before.members.map((m) => [m.id, m]));
   const afterIds = new Set(after.members.map((m) => m.id));
 
   for (const m of before.members) {
-    // Cascades to the member's swipes.
+    // Cascades to the member's swipes and preferences.
     if (!afterIds.has(m.id)) await db.query('DELETE FROM members WHERE id = $1', [m.id]);
   }
   for (const m of after.members) {
     const old = beforeMembers.get(m.id);
     if (!old) {
       await insertMember(db, after.code, m);
-    } else if (old.disconnectedAt !== m.disconnectedAt || old.name !== m.name) {
+      continue;
+    }
+    if (old.disconnectedAt !== m.disconnectedAt || old.name !== m.name) {
       await db.query('UPDATE members SET disconnected_at = $2, name = $3 WHERE id = $1', [
         m.id,
         m.disconnectedAt === null ? null : toDate(m.disconnectedAt),
         m.name,
       ]);
     }
+    if (!sameJson(old.preferences, m.preferences)) await writePreferences(db, m);
   }
 
   const swipeKey = (s: Swipe) => `${s.memberId}|${s.cardId}`;
   const oldSwipes = new Set(before.swipes.map(swipeKey));
+  const newSwipes = new Set(after.swipes.map(swipeKey));
+  // Votes removed other than by a member leaving: a deck rebuild clears them all.
+  for (const s of before.swipes) {
+    if (!newSwipes.has(swipeKey(s)) && afterIds.has(s.memberId)) {
+      await db.query('DELETE FROM swipes WHERE member_id = $1 AND card_id = $2', [
+        s.memberId,
+        s.cardId,
+      ]);
+    }
+  }
   for (const s of after.swipes) {
     if (oldSwipes.has(swipeKey(s)) || !afterIds.has(s.memberId)) continue;
     await db.query(
@@ -246,6 +303,15 @@ async function persistDiff(db: pg.PoolClient, before: StoredSession, after: Stor
   }
 
   const oldMatches = new Set(before.matches.map((m) => m.cardId));
+  const newMatches = new Set(after.matches.map((m) => m.cardId));
+  for (const cardId of oldMatches) {
+    if (!newMatches.has(cardId)) {
+      await db.query('DELETE FROM matches WHERE session_code = $1 AND card_id = $2', [
+        after.code,
+        cardId,
+      ]);
+    }
+  }
   for (const m of after.matches) {
     if (oldMatches.has(m.cardId)) continue;
     await db.query(

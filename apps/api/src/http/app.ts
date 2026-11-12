@@ -20,6 +20,9 @@ const STATUS_BY_ERROR: Record<SessionErrorCode, number> = {
   not_member: 403,
   not_started: 409,
   unknown_card: 400,
+  already_started: 409,
+  // The recipe service is down, or the group's rules leave too few recipes.
+  deck_unavailable: 503,
 };
 
 export interface AppOptions {

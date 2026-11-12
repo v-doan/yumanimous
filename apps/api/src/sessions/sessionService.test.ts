@@ -1,6 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { Card } from '@yumanimous/shared';
-import type { DeckSource } from '../deck/deckSource.js';
+import {
+  emptyPreferences,
+  type Card,
+  type GroupPreferences,
+  type MemberPreferences,
+} from '@yumanimous/shared';
+import { DeckError, type DeckSource } from '../deck/deckSource.js';
 import { SessionService, type SessionEvent } from './sessionService.js';
 import { createTestDatabase, databaseUrl } from '@yumanimous/db/testing';
 import { PostgresSessionStore } from './postgresSessionStore.js';
@@ -12,7 +17,22 @@ const deck: Card[] = ['soup', 'salad', 'stew'].map((id) => ({
   tags: [],
   blurb: `${id}!`,
 }));
-const deckSource: DeckSource = { mode: 'cook-in', buildDeck: async () => deck };
+/** Records the merged rules each deck was asked to satisfy. */
+let deckRequests: (GroupPreferences | undefined)[] = [];
+let nextDeck: Card[] | Error = deck;
+const deckSource: DeckSource = {
+  mode: 'cook-in',
+  buildDeck: async (group) => {
+    deckRequests.push(group);
+    if (nextDeck instanceof Error) throw nextDeck;
+    return nextDeck;
+  },
+};
+
+const prefs = (p: Partial<MemberPreferences>): MemberPreferences => ({
+  ...emptyPreferences(),
+  ...p,
+});
 
 // The same behaviour tests run against both stores. That's the proof that Postgres
 // and the in-memory store are interchangeable behind the SessionStore interface.
@@ -33,6 +53,8 @@ describe.each(['memory', 'postgres'] as const)('SessionService with %s store', (
 
     beforeEach(async () => {
       clock = 1_000;
+      deckRequests = [];
+      nextDeck = deck;
       if (db) await db.reset();
       store = db ? new PostgresSessionStore(db.pool) : new InMemorySessionStore();
       service = new SessionService({ store, deckSource, now: () => clock });
@@ -60,7 +82,9 @@ describe.each(['memory', 'postgres'] as const)('SessionService with %s store', (
         const view = await service.view(code);
         expect(view.status).toBe('lobby');
         expect(view.members).toEqual([expect.objectContaining({ id: memberId, isHost: true })]);
-        expect(view.deck.map((c) => c.id)).toEqual(['soup', 'salad', 'stew']);
+        // The deck waits for everyone's food rules: it's built at the start.
+        expect(view.deck).toEqual([]);
+        expect(view.deckFilters).toBeNull();
       });
 
       it('never exposes token hashes in the view', async () => {
@@ -264,6 +288,108 @@ describe.each(['memory', 'postgres'] as const)('SessionService with %s store', (
         expect(await service.sweepIdle(5_000)).toBe(1);
         await expect(service.view(old.code)).rejects.toMatchObject({ code: 'not_found' });
         await expect(service.view(fresh.code)).resolves.toBeDefined();
+      });
+    });
+
+    describe('food rules and the deck', () => {
+      it('builds the deck at the start from everyone’s merged hard rules', async () => {
+        const host = await service.create({ hostName: 'Host', matchRule: 'everyone' });
+        const sam = await service.join(host.code, 'Sam');
+        await service.setPreferences(host.code, host.memberId, prefs({ diets: ['vegetarian'] }));
+        await service.setPreferences(
+          host.code,
+          sam.memberId,
+          prefs({ intolerances: ['peanut'], maxReadyMinutes: 30 }),
+        );
+        expect(deckRequests).toEqual([]); // Nothing built in the lobby.
+
+        await service.start(host.code, host.memberId);
+        const hard = {
+          diets: ['vegetarian'],
+          intolerances: ['peanut'],
+          excludeIngredients: [],
+          maxReadyMinutes: 30,
+        };
+        expect(deckRequests[0]?.hard).toEqual(hard);
+        const view = await service.view(host.code);
+        expect(view.deck.map((c) => c.id)).toEqual(['soup', 'salad', 'stew']);
+        expect(view.deckFilters).toEqual(hard);
+        expect(view.uncovered).toEqual([]);
+        expect(view.members.find((m) => m.id === sam.memberId)?.preferences).toMatchObject({
+          intolerances: ['peanut'],
+        });
+      });
+
+      it('warns about a late joiner’s rule the deck was never filtered for', async () => {
+        const { code } = await startedSession([]);
+        const kim = await service.join(code, 'Kim');
+        await service.setPreferences(code, kim.memberId, prefs({ intolerances: ['shellfish'] }));
+        expect((await service.view(code)).uncovered).toEqual([
+          { rule: 'no shellfish', members: ['Kim'] },
+        ]);
+      });
+
+      it('rebuilds the deck for everyone’s current rules and clears the votes', async () => {
+        const { code, ids } = await startedSession([]);
+        await service.swipe(code, ids[0]!, { cardId: 'soup', direction: 'like' });
+        expect((await service.view(code)).matches).toHaveLength(1);
+        const kim = await service.join(code, 'Kim');
+        await service.setPreferences(code, kim.memberId, prefs({ intolerances: ['shellfish'] }));
+
+        nextDeck = [{ id: 'tofu', title: 'Tofu', tags: [], blurb: 'Tofu!' }];
+        await service.rebuildDeck(code, ids[0]!);
+
+        expect(deckRequests.at(-1)?.hard.intolerances).toEqual(['shellfish']);
+        const view = await service.view(code);
+        expect(view.deck.map((c) => c.id)).toEqual(['tofu']);
+        expect(view.swipes).toEqual([]);
+        expect(view.matches).toEqual([]);
+        expect(view.uncovered).toEqual([]);
+      });
+
+      it('only the host can rebuild, and only once swiping', async () => {
+        const host = await service.create({ hostName: 'Host', matchRule: 'everyone' });
+        const sam = await service.join(host.code, 'Sam');
+        await expect(service.rebuildDeck(host.code, host.memberId)).rejects.toMatchObject({
+          code: 'not_started',
+        });
+        await service.start(host.code, host.memberId);
+        await expect(service.rebuildDeck(host.code, sam.memberId)).rejects.toMatchObject({
+          code: 'not_host',
+        });
+      });
+
+      it('cannot start twice', async () => {
+        const { code, ids } = await startedSession([]);
+        await expect(service.start(code, ids[0]!)).rejects.toMatchObject({
+          code: 'already_started',
+        });
+      });
+
+      it('passes a deck failure to the host as a readable error and stays in the lobby', async () => {
+        const host = await service.create({ hostName: 'Host', matchRule: 'everyone' });
+        nextDeck = new DeckError('Only 1 recipe fits everyone’s rules (vegan).');
+        await expect(service.start(host.code, host.memberId)).rejects.toMatchObject({
+          code: 'deck_unavailable',
+          message: 'Only 1 recipe fits everyone’s rules (vegan).',
+        });
+        expect((await service.view(host.code)).status).toBe('lobby');
+      });
+
+      it('rejects preferences from non-members', async () => {
+        const host = await service.create({ hostName: 'Host', matchRule: 'everyone' });
+        await expect(
+          service.setPreferences(host.code, 'stranger', prefs({})),
+        ).rejects.toMatchObject({ code: 'not_member' });
+      });
+
+      it('forgets a member’s rules when they leave', async () => {
+        const host = await service.create({ hostName: 'Host', matchRule: 'everyone' });
+        const sam = await service.join(host.code, 'Sam');
+        await service.setPreferences(host.code, sam.memberId, prefs({ diets: ['vegan'] }));
+        await service.removeMember(host.code, sam.memberId);
+        await service.start(host.code, host.memberId);
+        expect(deckRequests[0]?.hard.diets).toEqual([]);
       });
     });
 

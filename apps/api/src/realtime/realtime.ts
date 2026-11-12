@@ -2,6 +2,7 @@ import type { Server as HttpServer } from 'node:http';
 import { Server, type Socket } from 'socket.io';
 import { z } from 'zod';
 import {
+  MemberPreferencesSchema,
   SocketAuthSchema,
   SwipeInputSchema,
   type Ack,
@@ -82,6 +83,17 @@ export function attachRealtime(
     socket.on(
       'session:start',
       handle(() => service.start(code, memberId)),
+    );
+    socket.on(
+      'preferences:set',
+      handle(async (input: unknown) => {
+        // The client sends enum-only data, but it's still untrusted: validate it.
+        await service.setPreferences(code, memberId, MemberPreferencesSchema.parse(input));
+      }),
+    );
+    socket.on(
+      'session:rebuild',
+      handle(() => service.rebuildDeck(code, memberId)),
     );
     socket.on(
       'session:leave',

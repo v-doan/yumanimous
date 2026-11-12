@@ -1,8 +1,15 @@
 .room {
   position: relative;
-  display: grid;
-  grid-template-rows: auto 1fr;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
+  min-height: 0;
+}
+
+/* Whatever the room shows (lobby, deck, results) fills the remaining height. */
+.content {
+  display: grid;
+  flex: 1;
   min-height: 0;
 }
 

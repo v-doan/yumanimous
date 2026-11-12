@@ -1,19 +1,25 @@
 import { useState } from 'react';
-import { matchRules, type SessionView } from '@yumanimous/shared';
+import { matchRules, type MemberPreferences, type SessionView } from '@yumanimous/shared';
+import { GroupRules } from './GroupRules';
 import { MemberList } from './MemberList';
+import { PreferencesPanel } from './PreferencesPanel';
 import ui from '../ui/ui.module.css';
 import styles from './Lobby.module.css';
 
 interface LobbyProps {
   view: SessionView;
   myId: string;
-  onStart: () => void;
+  onStart: () => Promise<void>;
+  onSavePreferences: (preferences: MemberPreferences) => Promise<boolean>;
 }
 
 /** Waiting room: share the link, watch friends arrive, host taps Start. */
-export function Lobby({ view, myId, onStart }: LobbyProps) {
-  const isHost = view.members.find((m) => m.id === myId)?.isHost ?? false;
+export function Lobby({ view, myId, onStart, onSavePreferences }: LobbyProps) {
+  const me = view.members.find((m) => m.id === myId);
+  const isHost = me?.isHost ?? false;
   const host = view.members.find((m) => m.isHost);
+  // Starting fetches recipes for everyone's rules, which can take a second or two.
+  const [starting, setStarting] = useState(false);
 
   return (
     <div className={ui.page}>
@@ -37,9 +43,25 @@ export function Lobby({ view, myId, onStart }: LobbyProps) {
         <MemberList view={view} myId={myId} />
       </section>
 
+      <PreferencesPanel saved={me?.preferences ?? null} onSave={onSavePreferences} />
+      <GroupRules view={view} />
+
       {isHost ? (
-        <button type="button" className={ui.primary} onClick={onStart}>
-          {view.members.length === 1 ? 'Start anyway' : 'Start swiping'}
+        <button
+          type="button"
+          className={ui.primary}
+          disabled={starting}
+          onClick={async () => {
+            setStarting(true);
+            await onStart();
+            setStarting(false);
+          }}
+        >
+          {starting
+            ? 'Finding recipes…'
+            : view.members.length === 1
+              ? 'Start anyway'
+              : 'Start swiping'}
         </button>
       ) : (
         <p className={ui.muted}>Waiting for {host?.name ?? 'the host'} to start…</p>

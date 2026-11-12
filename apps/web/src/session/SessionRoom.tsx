@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import type { Membership } from '@yumanimous/shared';
 import { SwipeDeck } from '../deck/SwipeDeck';
+import { UncoveredWarning } from './GroupRules';
 import { Lobby } from './Lobby';
 import { MatchOverlay } from './MatchOverlay';
+import { PreferencesPanel } from './PreferencesPanel';
 import { Results } from './Results';
 import { useSession } from './useSession';
 import ui from '../ui/ui.module.css';
@@ -19,10 +21,17 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
   const session = useSession(membership);
   const { view, ended, pending, currentMatch, error, clearError } = session;
   const [showResults, setShowResults] = useState(false);
+  const [rulesAsked, setRulesAsked] = useRulesAsked(membership);
 
   useEffect(() => {
     if (ended === 'invalid-identity') onLostIdentity();
   }, [ended, onLostIdentity]);
+
+  // Anyone who saw the lobby already had the chance to add food rules.
+  const inLobby = view?.status === 'lobby';
+  useEffect(() => {
+    if (inLobby) setRulesAsked();
+  }, [inLobby, setRulesAsked]);
 
   useEffect(() => {
     if (!error) return;
@@ -57,6 +66,9 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
   const doneSwiping = index === -1;
 
   const matchedCard = currentMatch ? view.deck.find((c) => c.id === currentMatch) : undefined;
+  // Joined after the start: one chance to add food rules before the first card.
+  const askForRules =
+    view.status === 'swiping' && !rulesAsked && !me?.preferences && mine.size === 0;
 
   return (
     <div className={styles.room}>
@@ -89,13 +101,36 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
         </span>
       </div>
 
-      {view.status === 'lobby' ? (
-        <Lobby view={view} myId={membership.memberId} onStart={session.start} />
-      ) : doneSwiping || showResults ? (
-        <Results view={view} myId={membership.memberId} />
-      ) : (
-        <SwipeDeck cards={view.deck} index={index} onSwipe={session.swipe} />
+      {view.status === 'swiping' && (
+        <UncoveredWarning view={view} isHost={me?.isHost ?? false} onRebuild={session.rebuild} />
       )}
+
+      <div className={styles.content}>
+        {view.status === 'lobby' ? (
+          <Lobby
+            view={view}
+            myId={membership.memberId}
+            onStart={session.start}
+            onSavePreferences={session.setPreferences}
+          />
+        ) : askForRules ? (
+          <div className={ui.page}>
+            <PreferencesPanel
+              saved={null}
+              onSave={async (p) => {
+                const ok = await session.setPreferences(p);
+                if (ok) setRulesAsked();
+                return ok;
+              }}
+              onSkip={setRulesAsked}
+            />
+          </div>
+        ) : doneSwiping || showResults ? (
+          <Results view={view} myId={membership.memberId} />
+        ) : (
+          <SwipeDeck cards={view.deck} index={index} onSwipe={session.swipe} />
+        )}
+      </div>
 
       {matchedCard && (
         <MatchOverlay
@@ -119,4 +154,25 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
       )}
     </div>
   );
+}
+
+/** Remembered per member, so a refresh doesn't ask again. */
+function useRulesAsked({ code, memberId }: Membership): [boolean, () => void] {
+  const key = `yumanimous:rules-asked:${code}:${memberId}`;
+  const [asked, setAsked] = useState(() => {
+    try {
+      return localStorage.getItem(key) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const markAsked = useCallback(() => {
+    setAsked(true);
+    try {
+      localStorage.setItem(key, '1');
+    } catch {
+      // Storage blocked: we'll just ask again after a refresh.
+    }
+  }, [key]);
+  return [asked, markAsked];
 }

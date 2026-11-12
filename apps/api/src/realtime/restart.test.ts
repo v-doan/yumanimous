@@ -51,9 +51,11 @@ describe.skipIf(!databaseUrl)('API restart mid-session', () => {
     });
 
     try {
-      const firstState = await nextState(client, () => true);
+      await nextState(client, () => true);
+      // The deck is built at the start, so read it from the state that follows.
+      const started = nextState(client, (v) => v.status === 'swiping');
       await client.emitWithAck('session:start');
-      const card = firstState.deck[0]!.id;
+      const card = (await started).deck[0]!.id;
       expect(await swipe(client, card)).toEqual({ ok: true });
 
       // Restart: a brand-new server process on the same port and database.

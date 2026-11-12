@@ -1,7 +1,11 @@
 import type pg from 'pg';
 import {
   CardSchema,
+  HardFiltersSchema,
+  MemberPreferencesSchema,
   type Card,
+  type HardFilters,
+  type MemberPreferences,
   type MatchRuleId,
   type SessionStatus,
   type Swipe,
@@ -19,7 +23,15 @@ export interface SessionSnapshot {
   status: SessionStatus;
   hostId: string;
   deck: Card[];
-  members: { id: string; name: string; online: boolean }[];
+  /** The hard filters the deck was built with; null in the lobby. */
+  deckFilters: HardFilters | null;
+  members: {
+    id: string;
+    name: string;
+    online: boolean;
+    /** Confirmed, enum-only rules. The text a member typed is never stored. */
+    preferences: MemberPreferences | null;
+  }[];
   swipes: Swipe[];
   matches: { cardId: string; matchedAt: string }[];
 }
@@ -51,14 +63,23 @@ async function readSnapshot(db: pg.PoolClient, code: string): Promise<SessionSna
     match_rule: MatchRuleId;
     status: SessionStatus;
     host_id: string;
-  }>('SELECT code, mode, match_rule, status, host_id FROM sessions WHERE code = $1', [code]);
+    deck_filters: unknown;
+  }>('SELECT code, mode, match_rule, status, host_id, deck_filters FROM sessions WHERE code = $1', [
+    code,
+  ]);
   const row = session.rows[0];
   if (!row) return undefined;
 
   // Deliberately not selected: token_hash. Rejoin secrets never leave the API.
-  const members = await db.query<{ id: string; name: string; online: boolean }>(
-    `SELECT id, name, disconnected_at IS NULL AS online
-     FROM members WHERE session_code = $1 ORDER BY seq`,
+  const members = await db.query<{
+    id: string;
+    name: string;
+    online: boolean;
+    preferences: unknown;
+  }>(
+    `SELECT m.id, m.name, m.disconnected_at IS NULL AS online, p.preferences
+     FROM members m LEFT JOIN member_preferences p ON p.member_id = m.id
+     WHERE m.session_code = $1 ORDER BY m.seq`,
     [code],
   );
   const deck = await db.query<{ card: unknown }>(
@@ -85,7 +106,14 @@ async function readSnapshot(db: pg.PoolClient, code: string): Promise<SessionSna
     status: row.status,
     hostId: row.host_id,
     deck: deck.rows.map((r) => CardSchema.parse(r.card)),
-    members: members.rows,
+    deckFilters: row.deck_filters === null ? null : HardFiltersSchema.parse(row.deck_filters),
+    // jsonb is re-validated on read, like everything else that reaches a model.
+    members: members.rows.map((m) => ({
+      id: m.id,
+      name: m.name,
+      online: m.online,
+      preferences: m.preferences === null ? null : MemberPreferencesSchema.parse(m.preferences),
+    })),
     swipes: swipes.rows.map((s) => ({
       cardId: s.card_id,
       memberId: s.member_id,

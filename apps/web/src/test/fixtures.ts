@@ -12,6 +12,7 @@ export const member = (id: string, overrides: Partial<Member> = {}): Member => (
   isHost: false,
   connected: true,
   swipedCount: 0,
+  preferences: null,
   joinedAt: 0,
   ...overrides,
 });
@@ -26,5 +27,7 @@ export const sessionView = (overrides: Partial<SessionView> = {}): SessionView =
   swipes: [],
   matches: [],
   finished: false,
+  deckFilters: null,
+  uncovered: [],
   ...overrides,
 });

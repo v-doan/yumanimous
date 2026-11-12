@@ -50,6 +50,18 @@ describe('SpoonacularClient', () => {
     expect((await client.searchMainCourses(2)).recipes).toHaveLength(1);
   });
 
+  // Regression: the deck source's 50-recipe pool must not hit the MCP tool's 20 cap.
+  it('allows large pools for the deck source and sends excluded ingredients', async () => {
+    const fetch = vi.fn(async (_url: string | URL | Request) => okResponse(fixture)); // A fresh body per call.
+    const client = new SpoonacularClient({ apiKey: 'k', fetch });
+    await client.searchMainCourses(50);
+    await client.searchRecipes({ excludeIngredients: ['kiwi', 'pork'], count: 30 });
+    expect(new URL(String(fetch.mock.calls[0]![0])).searchParams.get('number')).toBe('50');
+    expect(new URL(String(fetch.mock.calls[1]![0])).searchParams.get('excludeIngredients')).toBe(
+      'kiwi,pork',
+    );
+  });
+
   it('throws RecipeApiError with the status when the quota is used up', async () => {
     const client = new SpoonacularClient({
       apiKey: 'k',

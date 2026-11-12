@@ -1,6 +1,8 @@
 import type {
   Card,
+  HardFilters,
   Match,
+  MemberPreferences,
   MatchRuleId,
   SessionMode,
   SessionStatus,
@@ -14,6 +16,8 @@ export interface StoredMember {
   joinedAt: number;
   /** null while online; otherwise when the member's last socket closed (epoch ms). */
   disconnectedAt: number | null;
+  /** Confirmed food rules, or null if the member hasn't set any. */
+  preferences: MemberPreferences | null;
 }
 
 /** The server's private view of a session. `toView` strips secrets before broadcasting. */
@@ -23,7 +27,10 @@ export interface StoredSession {
   matchRule: MatchRuleId;
   status: SessionStatus;
   hostId: string;
+  /** Empty in the lobby; built from everyone's rules when the host starts. */
   deck: Card[];
+  /** The hard filters `deck` was built with; null until the start. */
+  deckFilters: HardFilters | null;
   /** Ordered by join time; host handoff relies on that order. */
   members: StoredMember[];
   swipes: Swipe[];

@@ -25,7 +25,9 @@ export async function createTestDatabase() {
     pool,
     /** Empties every table between tests; much faster than a new database. */
     reset: () =>
-      pool.query('TRUNCATE sessions, members, swipes, matches, session_cards, cards, api_cache'),
+      pool.query(
+        'TRUNCATE sessions, members, member_preferences, swipes, matches, session_cards, cards, api_cache',
+      ),
     drop: async () => {
       await pool.end();
       await adminQuery(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);

@@ -3,9 +3,9 @@
 Swipe-to-decide for groups: everyone swipes on a shared deck, and it's a match when the group is
 _yumanimous_. Zero install: join from a link in the group chat.
 
-> Work in progress. Phase 4: two MCP servers expose recipes and live session data to Claude
-> (Desktop, Code, and the app's own agents from Phase 6). Sessions persist in Postgres and decks come
-> from a real recipe API, cached to respect its free quota.
+> Work in progress. Phase 5: members describe their food rules in plain words; any member's
+> dietary restriction filters the whole group's deck. Earlier phases: live sessions over WebSockets,
+> Postgres persistence, a cached recipe API, and two MCP servers for Claude.
 
 ## Quick start
 
@@ -56,6 +56,34 @@ Members who drop offline still count for 2 minutes (refresh, locked phone), then
 and their votes stop counting. If the host is removed, the earliest-joined member who is online
 becomes host. Late joiners swipe the full deck; matches that already happened stay matched.
 
+## Food rules
+
+In the lobby, each member types their rules in plain words: _"vegetarian, allergic to peanuts,
+nothing over 45 min, love spicy"_. A keyword parser
+([`preferenceParser.ts`](packages/shared/src/preferenceParser.ts)) turns that into chips as they
+type, in the browser, with no AI and no network. The member removes anything it got wrong and saves.
+Only the confirmed chips are sent (all enums or validated short words), never the typed text.
+
+| Kind             | Examples                                                | Effect                                      |
+| ---------------- | ------------------------------------------------------- | ------------------------------------------- |
+| **Must** (hard)  | vegan, gluten free, no peanut, no kiwi, under 30 min    | Filters the deck for the **whole group**    |
+| **Prefer**       | likes Thai, not keen on mushroom, in the mood for spicy | Ranks the deck                              |
+| **Can't filter** | halal, kosher, low sodium                               | Shown to everyone: "check these yourselves" |
+
+- **Anyone's restriction binds everyone.** `mergePreferences` unions every member's hard rules (and
+  drops redundant ones: vegan implies vegetarian). The smallest time limit wins.
+- **The deck is built when the host starts**, by a recipe search _with_ those filters, so the recipe
+  API applies them. With hard rules there is no fallback to the unchecked hard-coded recipes: if the
+  search can't run, or fewer than 3 recipes fit, the host is told why.
+- **Late joiners** get one chance to add rules before their first card. If the deck wasn't filtered
+  for one of them, everyone sees a warning naming the rule, and the host can rebuild the deck (which
+  clears the votes, since they were cast on a different deck).
+- The parser leans safe: any negated mention of an allergen ("no nuts", "can't have eggs") is a hard
+  rule. It's covered by ~45 real-world phrasings in
+  [`preferences.test.ts`](packages/shared/src/preferences.test.ts), including negations ("not
+  vegetarian"), lists ("no peanuts and shellfish"), unknown allergens ("allergic to kiwi") and a
+  prompt-injection attempt, which stays inert.
+
 ## Persistence
 
 Postgres holds sessions, members, swipes and matches (schema:
@@ -88,13 +116,14 @@ Two [Model Context Protocol](https://modelcontextprotocol.io) servers give Claud
 Phase 6, the app's own agents) structured access to recipes and sessions. Each is a
 transport-agnostic `createXServer()` plus a small `stdio.ts` launcher.
 
-| Server               | Tool                | What it's for                                                                                           |
-| -------------------- | ------------------- | ------------------------------------------------------------------------------------------------------- |
-| `yumanimous-recipes` | `search_recipes`    | Filtered search: query, cuisine, `diets` (AND), `intolerances` (excluded), max time, type, 1–20 results |
-|                      | `get_recipe`        | Ingredients with amounts and supermarket aisle, numbered steps (for the Phase 7 cook plan)              |
-| `yumanimous-session` | `get_session`       | Match rule, status, members, who's online, swipe progress, matches                                      |
-|                      | `get_swipe_history` | Each member's yums and skips with card titles and tags (for re-ranking)                                 |
-|                      | `get_vote_tally`    | Per-card yums, skips and outcome under the session's rule, best first (for the no-match mediator)       |
+| Server               | Tool                     | What it's for                                                                                            |
+| -------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `yumanimous-recipes` | `search_recipes`         | Filtered search: query, cuisine, `diets` (AND), `intolerances` (excluded), max time, type, 1–20 results  |
+|                      | `get_recipe`             | Ingredients with amounts and supermarket aisle, numbered steps (for the Phase 7 cook plan)               |
+| `yumanimous-session` | `get_session`            | Match rule, status, members, who's online, swipe progress, matches                                       |
+|                      | `get_swipe_history`      | Each member's yums and skips with card titles and tags (for re-ranking)                                  |
+|                      | `get_vote_tally`         | Per-card yums, skips and outcome under the session's rule, best first (for the no-match mediator)        |
+|                      | `get_member_preferences` | Each member's confirmed rules, the merged hard/soft rules, and what the current deck wasn't filtered for |
 
 Design choices:
 

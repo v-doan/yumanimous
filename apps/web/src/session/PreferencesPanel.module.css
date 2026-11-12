@@ -1,0 +1,91 @@
+.textarea {
+  min-height: 84px;
+  padding: var(--space-3) var(--space-4);
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.group-label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* Hard rules stand out: they filter everyone's deck. */
+.must {
+  background: var(--color-green);
+  color: var(--color-on-accent);
+}
+
+.prefer {
+  background: var(--color-chip);
+  color: var(--color-text);
+}
+
+.unsupported {
+  border: 1px dashed var(--color-text-secondary);
+  color: var(--color-text-secondary);
+}
+
+.remove {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-right: calc(-1 * var(--space-2));
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.remove:focus-visible {
+  outline: 2px solid currentColor;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.actions > :first-child {
+  flex: 1;
+}
