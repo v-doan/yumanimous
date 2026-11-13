@@ -122,6 +122,7 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
     status: SessionStatus;
     host_id: string;
     deck_filters: unknown;
+    reranked_at: Date | null;
     updated_at: Date;
   }>(`SELECT * FROM sessions WHERE code = $1 ${forUpdate ? 'FOR UPDATE' : ''}`, [code]);
   const row = session.rows[0];
@@ -130,7 +131,10 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
   // Sequential, not Promise.all: inside a transaction these share one connection,
   // which runs one query at a time anyway (and pg@9 will reject overlapping calls).
   const deck = await db.query<{ card: unknown }>(
-    `SELECT c.card FROM session_cards sc JOIN cards c ON c.id = sc.card_id
+    // The session's own copy of each card (with its AI blurb); the shared catalog
+    // only for rows written before migration 004.
+    `SELECT COALESCE(sc.card, c.card) AS card
+       FROM session_cards sc JOIN cards c ON c.id = sc.card_id
        WHERE sc.session_code = $1 ORDER BY sc.position`,
     [code],
   );
@@ -168,6 +172,7 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
     // jsonb comes back as plain JSON; re-validate so a bad row can't reach clients.
     deck: deck.rows.map((r) => CardSchema.parse(r.card)),
     deckFilters: row.deck_filters === null ? null : HardFiltersSchema.parse(row.deck_filters),
+    rerankedAt: toMs(row.reranked_at),
     members: members.rows.map((m) => ({
       id: m.id,
       name: m.name,
@@ -199,8 +204,8 @@ async function writeDeck(db: Queryable, code: string, deck: Card[]) {
       [card.id, cardSource(card.id), card],
     );
     await db.query(
-      'INSERT INTO session_cards (session_code, position, card_id) VALUES ($1, $2, $3)',
-      [code, position, card.id],
+      'INSERT INTO session_cards (session_code, position, card_id, card) VALUES ($1, $2, $3, $4)',
+      [code, position, card.id, card],
     );
   }
 }
@@ -240,20 +245,22 @@ const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringif
 async function persistDiff(db: pg.PoolClient, before: StoredSession, after: StoredSession) {
   await db.query(
     `UPDATE sessions SET status = $2, host_id = $3, match_rule = $4, deck_filters = $5,
-       updated_at = $6 WHERE code = $1`,
+       reranked_at = $6, updated_at = $7 WHERE code = $1`,
     [
       after.code,
       after.status,
       after.hostId,
       after.matchRule,
       after.deckFilters,
+      after.rerankedAt === null ? null : toDate(after.rerankedAt),
       toDate(after.updatedAt),
     ],
   );
 
   // A new deck (the start, or a host rebuild) replaces the old one wholesale.
-  const deckIds = (s: StoredSession) => s.deck.map((c) => c.id).join('|');
-  if (deckIds(before) !== deckIds(after)) {
+  // Compared by content, not just ids: a re-rank changes the order, and blurbs can
+  // arrive after the deck (both must be written).
+  if (!sameJson(before.deck, after.deck)) {
     await db.query('DELETE FROM session_cards WHERE session_code = $1', [after.code]);
     await writeDeck(db, after.code, after.deck);
   }

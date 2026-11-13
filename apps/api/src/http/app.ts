@@ -6,6 +6,7 @@ import {
   SessionCodeSchema,
   type ApiError,
 } from '@yumanimous/shared';
+import type { AiCallLog, BudgetGuard } from '../ai/aiCallLog.js';
 import {
   SessionError,
   type SessionErrorCode,
@@ -28,9 +29,11 @@ const STATUS_BY_ERROR: Record<SessionErrorCode, number> = {
 export interface AppOptions {
   /** Allowed browser origin when the web app is hosted elsewhere (production). */
   webOrigin?: string | undefined;
+  /** Development only: AI cost and latency for the debug page. */
+  debug?: { aiLog: AiCallLog; budget: BudgetGuard } | undefined;
 }
 
-export function createApp(service: SessionService, { webOrigin }: AppOptions = {}) {
+export function createApp(service: SessionService, { webOrigin, debug }: AppOptions = {}) {
   const app = express();
   app.disable('x-powered-by');
   // Requests here are tiny (a name, a rule). A small cap stops oversized payloads early.
@@ -58,6 +61,19 @@ export function createApp(service: SessionService, { webOrigin }: AppOptions = {
     const { name } = JoinSessionRequestSchema.parse(req.body);
     res.status(201).json(await service.join(code, name));
   });
+
+  if (debug) {
+    /** Every logged AI run (optionally for one session) and this month's spend. */
+    app.get('/api/debug/ai', async (req, res) => {
+      const session =
+        typeof req.query.session === 'string' ? parseCode(req.query.session) : undefined;
+      const [calls, month] = await Promise.all([
+        debug.aiLog.list({ ...(session ? { sessionCode: session } : {}), limit: 100 }),
+        debug.budget.status(),
+      ]);
+      res.json({ month, calls });
+    });
+  }
 
   app.use('/api', (_req, res) => {
     sendError(res, 404, { error: 'not_found', message: 'No such endpoint' });

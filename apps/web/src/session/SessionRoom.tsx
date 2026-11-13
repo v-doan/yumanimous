@@ -5,6 +5,7 @@ import { SwipeDeck } from '../deck/SwipeDeck';
 import { UncoveredWarning } from './GroupRules';
 import { Lobby } from './Lobby';
 import { MatchOverlay } from './MatchOverlay';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { PreferencesPanel } from './PreferencesPanel';
 import { Results } from './Results';
 import { useSession } from './useSession';
@@ -19,8 +20,10 @@ interface SessionRoomProps {
 
 export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
   const session = useSession(membership);
-  const { view, ended, pending, currentMatch, error, clearError } = session;
+  const { view, ended, pending, currentMatch, error, clearError, notice, clearNotice } = session;
   const [showResults, setShowResults] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const cancelLeave = useCallback(() => setConfirmLeave(false), []);
   const [rulesAsked, setRulesAsked] = useRulesAsked(membership);
 
   useEffect(() => {
@@ -38,6 +41,12 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
     const timer = setTimeout(clearError, 4000);
     return () => clearTimeout(timer);
   }, [error, clearError]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(clearNotice, 5000);
+    return () => clearTimeout(timer);
+  }, [notice, clearNotice]);
 
   if (ended) {
     return (
@@ -88,14 +97,7 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
               {showResults ? 'Back to deck' : 'Results'}
             </button>
           )}
-          <button
-            type="button"
-            className={ui.textButton}
-            onClick={() => {
-              if (window.confirm('Leave this session? Your votes will be removed.'))
-                session.leave();
-            }}
-          >
+          <button type="button" className={ui.textButton} onClick={() => setConfirmLeave(true)}>
             Leave
           </button>
         </span>
@@ -112,6 +114,7 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
             myId={membership.memberId}
             onStart={session.start}
             onSavePreferences={session.setPreferences}
+            deckProgress={session.deckProgress}
           />
         ) : askForRules ? (
           <div className={ui.page}>
@@ -147,9 +150,27 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
         />
       )}
 
+      {confirmLeave && (
+        <ConfirmDialog
+          title="Leave this session?"
+          message="Your votes and food rules will be removed for everyone."
+          confirmLabel="Leave"
+          onConfirm={() => {
+            setConfirmLeave(false);
+            session.leave();
+          }}
+          onCancel={cancelLeave}
+        />
+      )}
+
       {error && (
         <p className={styles.toast} role="alert">
           {error}
+        </p>
+      )}
+      {!error && notice && (
+        <p className={styles.toast} role="status">
+          {notice}
         </p>
       )}
     </div>

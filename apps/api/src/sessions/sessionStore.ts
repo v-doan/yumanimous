@@ -31,6 +31,8 @@ export interface StoredSession {
   deck: Card[];
   /** The hard filters `deck` was built with; null until the start. */
   deckFilters: HardFilters | null;
+  /** When the AI re-rank was started (it runs at most once); null if not yet. */
+  rerankedAt: number | null;
   /** Ordered by join time; host handoff relies on that order. */
   members: StoredMember[];
   swipes: Swipe[];

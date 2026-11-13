@@ -3,6 +3,7 @@ import { io, type Socket } from 'socket.io-client';
 import type {
   AckResult,
   ClientToServerEvents,
+  DeckProgressStage,
   MemberPreferences,
   Membership,
   ServerToClientEvents,
@@ -32,6 +33,10 @@ export function useSession(membership: Membership) {
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
   const [matchQueue, setMatchQueue] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  /** Where the AI deck build is ("scouting", …), while the host's Start runs. */
+  const [deckProgress, setDeckProgress] = useState<DeckProgressStage | null>(null);
+  /** A short, friendly message that isn't an error (e.g. the deck was re-ranked). */
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     // socket.io-client reconnects with backoff on its own; the same auth is resent,
@@ -54,7 +59,17 @@ export function useSession(membership: Membership) {
       // first and `end()` has already disconnected us, so this doesn't fire then.
       if (reason === 'io server disconnect') socket.connect();
     });
-    socket.on('session:state', setView);
+    socket.on('session:state', (next) => {
+      setView(next);
+      if (next.status === 'swiping') setDeckProgress(null);
+    });
+    socket.on('deck:progress', ({ stage }) => {
+      if (stage === 'reranked') {
+        setNotice('We reshuffled the rest of the deck based on how your group is swiping.');
+      } else {
+        setDeckProgress(stage);
+      }
+    });
     socket.on('session:match', ({ cardId }) => setMatchQueue((q) => [...q, cardId]));
     socket.on('session:ended', end);
     socket.on('connect_error', (err) => {
@@ -110,6 +125,7 @@ export function useSession(membership: Membership) {
 
   const dismissMatch = useCallback(() => setMatchQueue((q) => q.slice(1)), []);
   const clearError = useCallback(() => setError(null), []);
+  const clearNotice = useCallback(() => setNotice(null), []);
 
   return {
     view,
@@ -118,6 +134,9 @@ export function useSession(membership: Membership) {
     pending,
     currentMatch: matchQueue[0] ?? null,
     error,
+    deckProgress,
+    notice,
+    clearNotice,
     swipe,
     start,
     setPreferences,

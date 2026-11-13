@@ -17,6 +17,8 @@ export const SocketAuthSchema = z.object({
 
 export type SocketAuth = z.infer<typeof SocketAuthSchema>;
 
+export type DeckProgressStage = 'scouting' | 'curating' | 'writing' | 'reranked';
+
 export type AckResult = { ok: true } | { ok: false; error: string };
 export type Ack = (result: AckResult) => void;
 
@@ -37,6 +39,11 @@ export interface ClientToServerEvents {
 
 export interface ServerToClientEvents {
   'session:state': (view: SessionView) => void;
+  /**
+   * Deck-building progress while the host's Start is running ("scouting recipes…"),
+   * and "reranked" when the rest of the deck was reordered from the group's swipes.
+   */
+  'deck:progress': (progress: { stage: DeckProgressStage }) => void;
   /** Fired once per new match, so clients can show the match screen exactly once. */
   'session:match': (match: { cardId: string }) => void;
   /** The session no longer exists, or this member was removed. Clear the stored token. */

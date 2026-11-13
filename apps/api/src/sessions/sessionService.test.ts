@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   emptyPreferences,
   type Card,
@@ -390,6 +390,226 @@ describe.each(['memory', 'postgres'] as const)('SessionService with %s store', (
         await service.removeMember(host.code, sam.memberId);
         await service.start(host.code, host.memberId);
         expect(deckRequests[0]?.hard.diets).toEqual([]);
+      });
+    });
+
+    describe('blurbs that arrive after the deck', () => {
+      const cards: Card[] = ['a', 'b'].map((id) => ({
+        id,
+        title: id,
+        tags: [],
+        blurb: `Recipe blurb ${id}.`,
+      }));
+
+      it('are swapped into the live deck by card id', async () => {
+        let late: ((b: Map<string, string>) => void) | undefined;
+        const svc = new SessionService({
+          store,
+          deckSource: {
+            mode: 'cook-in',
+            buildDeck: async (_group, context) => {
+              late = context?.onBlurbs;
+              return cards;
+            },
+          },
+          now: () => clock,
+        });
+        const host = await svc.create({ hostName: 'Host', matchRule: 'everyone' });
+        await svc.start(host.code, host.memberId);
+
+        late!(
+          new Map([
+            ['b', 'Written by the AI for b.'],
+            ['gone', 'For a card not in this deck.'],
+          ]),
+        );
+        await vi.waitFor(async () =>
+          expect((await svc.view(host.code)).deck.map((c) => c.blurb)).toEqual([
+            'Recipe blurb a.',
+            'Written by the AI for b.',
+          ]),
+        );
+      });
+
+      it('are held when they arrive before the deck is saved, then applied', async () => {
+        const svc = new SessionService({
+          store,
+          deckSource: {
+            mode: 'cook-in',
+            buildDeck: async (_group, context) => {
+              // The writer finished before start() saved the deck.
+              context?.onBlurbs?.(new Map([['a', 'Early AI blurb for a.']]));
+              return cards;
+            },
+          },
+          now: () => clock,
+        });
+        const host = await svc.create({ hostName: 'Host', matchRule: 'everyone' });
+        await svc.start(host.code, host.memberId);
+        await vi.waitFor(async () =>
+          expect((await svc.view(host.code)).deck[0]!.blurb).toBe('Early AI blurb for a.'),
+        );
+      });
+    });
+
+    describe('one deck build at a time', () => {
+      /** A deck source whose build only finishes when the test says so. */
+      function slowDeckSource() {
+        let builds = 0;
+        let release: (cards: Card[] | Error) => void = () => {};
+        const source: DeckSource = {
+          mode: 'cook-in',
+          buildDeck: () => {
+            builds++;
+            return new Promise<Card[]>((resolve, reject) => {
+              release = (result) => (result instanceof Error ? reject(result) : resolve(result));
+            });
+          },
+        };
+        return { source, builds: () => builds, release: (r: Card[] | Error) => release(r) };
+      }
+
+      it('a second Start while building joins the first build instead of paying again', async () => {
+        const slow = slowDeckSource();
+        const svc = new SessionService({ store, deckSource: slow.source, now: () => clock });
+        const host = await svc.create({ hostName: 'Host', matchRule: 'everyone' });
+
+        const first = svc.start(host.code, host.memberId);
+        const second = svc.start(host.code, host.memberId); // Double tap / refresh.
+        await vi.waitFor(() => expect(slow.builds()).toBe(1));
+        slow.release(deck);
+
+        await expect(Promise.all([first, second])).resolves.toEqual([undefined, undefined]);
+        expect(slow.builds()).toBe(1);
+        expect((await svc.view(host.code)).status).toBe('swiping');
+        // Once it's done, a further Start is a plain "already started".
+        await expect(svc.start(host.code, host.memberId)).rejects.toMatchObject({
+          code: 'already_started',
+        });
+      });
+
+      it('a guest can’t join or start a build', async () => {
+        const slow = slowDeckSource();
+        const svc = new SessionService({ store, deckSource: slow.source, now: () => clock });
+        const host = await svc.create({ hostName: 'Host', matchRule: 'everyone' });
+        const sam = await svc.join(host.code, 'Sam');
+
+        const building = svc.start(host.code, host.memberId);
+        await vi.waitFor(() => expect(slow.builds()).toBe(1));
+        await expect(svc.start(host.code, sam.memberId)).rejects.toMatchObject({
+          code: 'not_host',
+        });
+        slow.release(deck);
+        await building;
+        expect(slow.builds()).toBe(1);
+      });
+
+      it('a failed build fails every waiter, then a retry builds again', async () => {
+        const slow = slowDeckSource();
+        const svc = new SessionService({ store, deckSource: slow.source, now: () => clock });
+        const host = await svc.create({ hostName: 'Host', matchRule: 'everyone' });
+
+        const first = svc.start(host.code, host.memberId);
+        const second = svc.start(host.code, host.memberId);
+        await vi.waitFor(() => expect(slow.builds()).toBe(1));
+        slow.release(new DeckError('Recipe service down'));
+        await expect(first).rejects.toMatchObject({ code: 'deck_unavailable' });
+        await expect(second).rejects.toMatchObject({ code: 'deck_unavailable' });
+        expect((await svc.view(host.code)).status).toBe('lobby');
+
+        const retry = svc.start(host.code, host.memberId);
+        await vi.waitFor(() => expect(slow.builds()).toBe(2));
+        slow.release(deck);
+        await retry;
+        expect((await svc.view(host.code)).status).toBe('swiping');
+      });
+
+      it('concurrent rebuilds share one build too', async () => {
+        const slow = slowDeckSource();
+        const svc = new SessionService({ store, deckSource: slow.source, now: () => clock });
+        const host = await svc.create({ hostName: 'Host', matchRule: 'everyone' });
+        const starting = svc.start(host.code, host.memberId);
+        await vi.waitFor(() => expect(slow.builds()).toBe(1));
+        slow.release(deck);
+        await starting;
+
+        const a = svc.rebuildDeck(host.code, host.memberId);
+        const b = svc.rebuildDeck(host.code, host.memberId);
+        await vi.waitFor(() => expect(slow.builds()).toBe(2));
+        slow.release(deck);
+        await Promise.all([a, b]);
+        expect(slow.builds()).toBe(2);
+      });
+    });
+
+    describe('AI re-rank', () => {
+      const big: Card[] = Array.from({ length: 16 }, (_, i) => ({
+        id: `c${i}`,
+        title: `Card ${i}`,
+        tags: [],
+        blurb: `Card ${i}!`,
+      }));
+
+      it('reorders only unswiped cards, once, after every member has swiped 8', async () => {
+        const rerank = vi.fn(async ({ cards }: { cards: Card[] }) =>
+          cards.map((c) => c.id).reverse(),
+        );
+        const svc = new SessionService({
+          store,
+          deckSource: { mode: 'cook-in', buildDeck: async () => big, rerank },
+          now: () => clock,
+        });
+        const seen: SessionEvent[] = [];
+        svc.subscribe((e) => seen.push(e));
+
+        const host = await svc.create({ hostName: 'Host', matchRule: 'everyone' });
+        const sam = await svc.join(host.code, 'Sam');
+        await svc.start(host.code, host.memberId);
+        for (let i = 0; i < 8; i++) {
+          await svc.swipe(host.code, host.memberId, { cardId: `c${i}`, direction: 'like' });
+        }
+        expect(rerank).not.toHaveBeenCalled(); // Sam hasn't swiped yet.
+        for (let i = 0; i < 8; i++) {
+          await svc.swipe(host.code, sam.memberId, { cardId: `c${i}`, direction: 'skip' });
+        }
+
+        await vi.waitFor(() =>
+          expect(seen).toContainEqual({
+            type: 'deck-progress',
+            code: host.code,
+            stage: 'reranked',
+          }),
+        );
+        expect(rerank).toHaveBeenCalledOnce();
+        expect(rerank.mock.calls[0]![0].cards.map((c: Card) => c.id)).toEqual(
+          big.slice(8).map((c) => c.id),
+        );
+        const view = await svc.view(host.code);
+        expect(view.deck.map((c) => c.id)).toEqual([
+          ...big.slice(0, 8).map((c) => c.id),
+          ...big
+            .slice(8)
+            .map((c) => c.id)
+            .reverse(),
+        ]);
+
+        await svc.swipe(host.code, host.memberId, { cardId: 'c15', direction: 'like' });
+        expect(rerank).toHaveBeenCalledOnce(); // Never twice.
+      });
+
+      it('leaves the deck alone when the AI has nothing to offer', async () => {
+        const svc = new SessionService({
+          store,
+          deckSource: { mode: 'cook-in', buildDeck: async () => big, rerank: async () => null },
+          now: () => clock,
+        });
+        const host = await svc.create({ hostName: 'Host', matchRule: 'everyone' });
+        await svc.start(host.code, host.memberId);
+        for (let i = 0; i < 8; i++) {
+          await svc.swipe(host.code, host.memberId, { cardId: `c${i}`, direction: 'like' });
+        }
+        await new Promise((r) => setTimeout(r, 20));
+        expect((await svc.view(host.code)).deck.map((c) => c.id)).toEqual(big.map((c) => c.id));
       });
     });
 

@@ -3,9 +3,10 @@
 Swipe-to-decide for groups: everyone swipes on a shared deck, and it's a match when the group is
 _yumanimous_. Zero install: join from a link in the group chat.
 
-> Work in progress. Phase 5: members describe their food rules in plain words; any member's
-> dietary restriction filters the whole group's deck. Earlier phases: live sessions over WebSockets,
-> Postgres persistence, a cached recipe API, and two MCP servers for Claude.
+> Work in progress. Phase 6: a Claude orchestrator with scout, curator and writer subagents builds
+> each deck and re-ranks it from the group's swipes, for about 3¢ a session, on a monthly budget.
+> Earlier phases: live sessions over WebSockets, Postgres, a cached recipe API, MCP servers, and food
+> rules that bind the whole group.
 
 ## Quick start
 
@@ -83,6 +84,70 @@ Only the confirmed chips are sent (all enums or validated short words), never th
   [`preferences.test.ts`](packages/shared/src/preferences.test.ts), including negations ("not
   vegetarian"), lists ("no peanuts and shellfish"), unknown allergens ("allergic to kiwi") and a
   prompt-injection attempt, which stays inert.
+
+## AI deck building
+
+When the host starts, a Claude **orchestrator** (Claude Agent SDK, `claude-haiku-5-5`) delegates to
+three subagents, each limited to the tools its job needs:
+
+| Agent        | Tools                                                                      | Job                                           |
+| ------------ | -------------------------------------------------------------------------- | --------------------------------------------- |
+| orchestrator | `Agent` (delegation) only                                                  | Runs scout, then curator, then writer         |
+| scout        | `list_candidates`, `search_candidates`, `get_member_preferences`           | Widens the pool towards the group's tastes    |
+| curator      | `list_candidates`, `submit_order`, `get_member_preferences`, `get_session` | Picks and orders 20 cards for the whole group |
+| writer       | `list_chosen`, `submit_blurbs`                                             | A short, fun blurb per card                   |
+
+The session tools are the Phase 4 `mcp-session` server, attached in-process on a read-only Postgres
+connection. While it runs, everyone sees _"Scouting recipes… Picking dishes everyone will like…"_
+live.
+
+**Work is handed in through tools, not text.** The curator calls `submit_order` and the writer
+`submit_blurbs`; the code validates each on arrival and assembles the deck. No agent retypes cards
+into a final answer (that was slow, cost tokens, and was one more place to garble an id). Because the
+order is known before the writer starts, **the deck goes live as soon as the curator submits**, with
+the recipe blurbs, and the AI blurbs replace them on everyone's screen a few seconds later.
+
+**AI suggests, code enforces.** The model never decides what is safe to eat:
+
+- The candidate pool comes from the Phase 5 search **with** the group's hard rules. The scout's
+  `search_candidates` tool has no diet or allergen parameters at all; the code injects the rules
+  into every search, so the scout can add "Thai" but can't drop "no peanuts".
+- The proposal is validated in [`aiDeckSource.ts`](apps/api/src/deck/aiDeckSource.ts): cards must
+  come from the candidate pool, appear once, and have a clean blurb of at most 160 characters (no
+  diet or health claims, no names). Invented or repeated cards are dropped.
+- Budget reached, a 60 s timeout, a refusal, bad output, any error: the non-AI deck is used, so a
+  session can always start.
+- Guest names and recipe titles reach the model only as JSON tool results, never in the prompt.
+
+**Re-rank.** Once every member has swiped 8 cards, a background run reads the swipe history and
+reorders the cards **nobody has swiped yet**. Cards anyone swiped never move, so nobody's place
+changes, and swiping never waits for AI. It runs once per session.
+
+**Locked down.** `tools: ['Agent']`, explicit `allowedTools`, `permissionMode: 'dontAsk'`,
+`settingSources: []`, `strictMcpConfig` and `disableClaudeAiConnectors` (so a developer's own
+settings, `.mcp.json` or claude.ai connectors never reach the agents), `persistSession: false`
+(transcripts contain guest names), and a per-run `maxBudgetUsd`. Subagents are forced inline
+(`CLAUDE_CODE_DISABLE_BACKGROUND_TASKS`): by default they run in the background, which restarts the
+orchestrator after each one and made runs up to 4x dearer and much slower, at the model's whim.
+
+**One build at a time.** A second Start (a double tap, or the host refreshing mid-build) joins the
+build already running instead of paying for another.
+
+**Cost and speed.** Every run is logged in `ai_calls` with tokens, cost and time; the dev page
+`/debug` (or `/debug/s/:code`) shows them. Measured on `claude-haiku-5-5`:
+
+| Version                                                    | Cost per deck | Cards visible after            | Turns |
+| ---------------------------------------------------------- | ------------- | ------------------------------ | ----- |
+| First version (background subagents, deck retyped as JSON) | ~$0.025–0.03  | 30–60 s                        | 11–12 |
+| Now (inline, handed in via tools, live on order)           | **~$0.0055**  | **~15 s** (blurbs ~11 s later) | **4** |
+
+A re-rank costs about $0.001 (3 s). Three limits stack: a per-run cap, the app's
+`AI_MONTHLY_BUDGET_USD` (default $8, after which AI switches off until next month) and the Console's
+workspace spend limit. At these prices $8 covers well over a thousand sessions a month.
+
+Two dev scripts: `npm run agent:smoke -w @yumanimous/api` (one tiny real call, under 1¢, to check a
+new machine) and `npm run deck:bench -w @yumanimous/api -- [--trace]` (one real build for a fixed
+test group in a throwaway session: time per stage, cost, and quality checks).
 
 ## Persistence
 
@@ -176,14 +241,14 @@ exactly as `.mcp.json` describes, lists its tools and calls a few.
 
 ## Layout
 
-| Path                   | What                                                                      |
-| ---------------------- | ------------------------------------------------------------------------- |
-| `apps/web`             | React + Vite app: home, join, lobby, swipe deck, match screen, results    |
-| `apps/api`             | Express + Socket.io + Postgres: sessions, presence, matches, recipes      |
-| `packages/shared`      | Zod schemas, socket event types and pure match rules, used by both        |
-| `packages/db`          | Postgres schema (SQL migrations), pools, API cache, test database helpers |
-| `packages/mcp-recipes` | MCP server + Spoonacular client (also used by the API's deck source)      |
-| `packages/mcp-session` | Read-only MCP server over live sessions                                   |
+| Path                   | What                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| `apps/web`             | React + Vite app: home, join, lobby, swipe deck, match screen, results          |
+| `apps/api`             | Express + Socket.io + Postgres: sessions, presence, matches, recipes, AI agents |
+| `packages/shared`      | Zod schemas, socket event types and pure match rules, used by both              |
+| `packages/db`          | Postgres schema (SQL migrations), pools, API cache, test database helpers       |
+| `packages/mcp-recipes` | MCP server + Spoonacular client (also used by the API's deck source)            |
+| `packages/mcp-session` | Read-only MCP server over live sessions                                         |
 
 Inside `apps/api`, `SessionService` holds every session rule and has no HTTP or socket code;
 `http/` and `realtime/` are thin transports over it. `SessionStore` (in-memory or Postgres) and

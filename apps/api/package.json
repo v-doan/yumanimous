@@ -6,12 +6,18 @@
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=../../.env src/server.ts",
     "start": "tsx --env-file-if-exists=../../.env src/server.ts",
+    "deck:bench": "tsx --env-file-if-exists=../../.env scripts/deckBench.ts",
+    "agent:smoke": "tsx --env-file-if-exists=../../.env scripts/agentSmoke.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.323",
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@yumanimous/db": "^0.0.0",
     "@yumanimous/mcp-recipes": "^0.0.0",
+    "@yumanimous/mcp-session": "^0.0.0",
     "@yumanimous/shared": "*",
     "express": "^5.3.0",
     "pg": "^8.23.1",

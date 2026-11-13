@@ -14,7 +14,8 @@ import {
   type SessionView,
   type SwipeInput,
 } from '@yumanimous/shared';
-import { DeckError, type DeckSource } from '../deck/deckSource.js';
+import { DeckError, type DeckProgressStage, type DeckSource } from '../deck/deckSource.js';
+import { applyRerank, shouldRerank, unswipedByAnyone } from './rerank.js';
 import {
   generateMemberId,
   generateSessionCode,
@@ -51,9 +52,12 @@ export type SessionEvent =
   | { type: 'changed'; code: string; view: SessionView }
   | { type: 'match'; code: string; cardId: string }
   | { type: 'member-removed'; code: string; memberId: string }
+  | { type: 'deck-progress'; code: string; stage: DeckProgressStage | 'reranked' }
   | { type: 'ended'; code: string };
 
 type Listener = (event: SessionEvent) => void;
+
+type DeckJobKind = 'start' | 'rebuild';
 
 export interface SessionServiceOptions {
   store: SessionStore;
@@ -72,6 +76,8 @@ export class SessionService {
   private readonly now: () => number;
   private readonly listeners = new Set<Listener>();
   private readonly locks = new Map<string, Promise<unknown>>();
+  /** The deck build running for each session, if any (see deckJob). */
+  private readonly deckJobs = new Map<string, { kind: DeckJobKind; promise: Promise<void> }>();
 
   constructor({ store, deckSource, now = Date.now }: SessionServiceOptions) {
     this.store = store;
@@ -99,6 +105,7 @@ export class SessionService {
         hostId: host.id,
         deck: [],
         deckFilters: null,
+        rerankedAt: null,
         members: [host],
         swipes: [],
         matches: [],
@@ -168,51 +175,116 @@ export class SessionService {
   /**
    * Host only: build the deck from everyone's merged rules, then open swiping. Any
    * member's dietary restriction is a hard filter for the whole group.
+   *
+   * Idempotent while it runs: a second tap, or the host refreshing mid-build, joins
+   * the build in progress instead of paying for another one.
    */
   async start(code: string, memberId: string): Promise<void> {
-    const session = await this.require(code);
-    requireHost(session, memberId, 'Only the host can start');
-    if (session.status !== 'lobby') {
-      throw new SessionError('already_started', 'This session has already started');
-    }
-    const { deck, filters } = await this.buildDeck(session);
-
-    await this.update(code, (current) => {
-      // Re-checked under the lock: the deck build above took a moment.
-      requireHost(current, memberId, 'Only the host can start');
-      if (current.status !== 'lobby') {
-        throw new SessionError('already_started', 'This session has already started');
-      }
-      current.deck = deck;
-      current.deckFilters = filters;
-      current.status = 'swiping';
-    });
+    return this.deckJob(code, memberId, 'start');
   }
 
   /**
    * Host only, mid-session: a fresh deck for everyone's current rules (e.g. a late
    * joiner's allergy). Votes and matches go too: they were cast on another deck.
+   * Like start, concurrent requests share one build.
    */
   async rebuildDeck(code: string, memberId: string): Promise<void> {
-    const session = await this.require(code);
-    requireHost(session, memberId, 'Only the host can rebuild the deck');
-    if (session.status !== 'swiping') {
-      throw new SessionError('not_started', 'The host has not started yet');
-    }
-    const { deck, filters } = await this.buildDeck(session);
+    return this.deckJob(code, memberId, 'rebuild');
+  }
+
+  /**
+   * Runs at most one deck build per session at a time. Checking for a running build
+   * and registering a new one happen together under a short lock, so two requests
+   * arriving at once can't both start one. The slow build itself runs outside it.
+   * (One API process: like presence, several processes would need a shared lock.)
+   */
+  private async deckJob(code: string, memberId: string, kind: DeckJobKind): Promise<void> {
+    const { job } = await this.withLock(`deck-job:${code}`, async () => {
+      const session = await this.require(code);
+      requireHost(
+        session,
+        memberId,
+        kind === 'start' ? 'Only the host can start' : 'Only the host can rebuild the deck',
+      );
+      const running = this.deckJobs.get(code);
+      if (running?.kind === kind) return { job: running.promise };
+      if (kind === 'start' && (running || session.status !== 'lobby')) {
+        throw new SessionError('already_started', 'This session has already started');
+      }
+      if (kind === 'rebuild' && (running || session.status !== 'swiping')) {
+        throw new SessionError('not_started', 'The host has not started yet');
+      }
+
+      const promise = this.buildAndApply(code, memberId, kind, session).finally(() =>
+        this.deckJobs.delete(code),
+      );
+      this.deckJobs.set(code, { kind, promise });
+      // Wrapped in an object: returning the promise itself would make this lock wait
+      // for the whole build.
+      return { job: promise };
+    });
+    return job;
+  }
+
+  private async buildAndApply(
+    code: string,
+    memberId: string,
+    kind: DeckJobKind,
+    session: StoredSession,
+  ): Promise<void> {
+    // The AI writer's blurbs can arrive after the deck goes live, or (if it's quick)
+    // before this build has saved the deck. Hold them until the deck is saved.
+    let deckSaved = false;
+    let heldBlurbs: Map<string, string> | null = null;
+    const onBlurbs = (blurbs: Map<string, string>) => {
+      if (deckSaved) void this.applyBlurbs(code, blurbs).catch((e) => console.error('[blurbs]', e));
+      else heldBlurbs = blurbs;
+    };
+
+    const { deck, filters } = await this.buildDeck(session, onBlurbs);
 
     await this.update(code, (current) => {
-      requireHost(current, memberId, 'Only the host can rebuild the deck');
+      // Re-checked under the session lock: the build above took a while.
+      requireHost(current, memberId, 'Only the host can change the deck');
+      if (kind === 'start') {
+        if (current.status !== 'lobby') {
+          throw new SessionError('already_started', 'This session has already started');
+        }
+        current.status = 'swiping';
+      } else {
+        current.swipes = [];
+        current.matches = [];
+        current.rerankedAt = null; // A new deck may be re-ranked once too.
+      }
       current.deck = deck;
       current.deckFilters = filters;
-      current.swipes = [];
-      current.matches = [];
     });
+    deckSaved = true;
+    const held: Map<string, string> | null = heldBlurbs;
+    if (held) void this.applyBlurbs(code, held).catch((e) => console.error('[blurbs]', e));
+  }
+
+  /** Swaps in AI blurbs for cards still in the deck (by id; positions don't matter). */
+  private async applyBlurbs(code: string, blurbs: Map<string, string>): Promise<void> {
+    await this.update(
+      code,
+      (session) => {
+        let changed = false;
+        session.deck = session.deck.map((card) => {
+          const blurb = blurbs.get(card.id);
+          if (!blurb || blurb === card.blurb) return card;
+          changed = true;
+          return { ...card, blurb };
+        });
+        return changed;
+      },
+      { ifExists: true },
+    );
   }
 
   /** Idempotent per card: a member's first swipe stands, repeats are ignored. */
   async swipe(code: string, memberId: string, input: SwipeInput): Promise<void> {
-    await this.update(code, (session) => {
+    const rerankCards = await this.update(code, (session) => {
       requireMember(session, memberId);
       if (session.status !== 'swiping') {
         throw new SessionError('not_started', 'The host has not started yet');
@@ -224,7 +296,45 @@ export class SessionService {
         (s) => s.memberId === memberId && s.cardId === input.cardId,
       );
       if (!already) session.swipes.push({ ...input, memberId });
+
+      // Claim the one-time re-rank in this same transaction, so two swipes landing
+      // together can't both start it, and no extra round trip is needed per swipe.
+      if (this.deckSource.rerank && shouldRerank(session)) {
+        session.rerankedAt = this.now();
+        return unswipedByAnyone(session.deck, session.swipes);
+      }
+      return null;
     });
+    // Off the swipe path: the swipe is already saved and broadcast.
+    if (rerankCards) {
+      void this.rerank(code, rerankCards).catch((err) => console.error('[rerank]', err));
+    }
+  }
+
+  /**
+   * Once per session, after every member has swiped enough to show the group's taste,
+   * the deck source reorders the cards nobody has swiped yet. Runs in the
+   * background; swiping never waits for it.
+   */
+  private async rerank(code: string, remaining: Card[]): Promise<void> {
+    if (!this.deckSource.rerank) return;
+    const order = await this.deckSource.rerank({ sessionCode: code, cards: remaining });
+    if (!order) return;
+
+    // Cards swiped while the AI was thinking stay where they are (applyRerank).
+    const applied = await this.update(
+      code,
+      (session) => {
+        if (session.status !== 'swiping') return false;
+        // The host rebuilt the deck while the AI was thinking: this order is stale.
+        const deckIds = new Set(session.deck.map((c) => c.id));
+        if (!remaining.every((c) => deckIds.has(c.id))) return false;
+        session.deck = applyRerank(session.deck, session.swipes, order);
+        return true;
+      },
+      { ifExists: true },
+    );
+    if (applied) this.emit({ type: 'deck-progress', code, stage: 'reranked' });
   }
 
   /**
@@ -337,10 +447,19 @@ export class SessionService {
   }
 
   /** Runs outside the session lock: it may call the recipe API. */
-  private async buildDeck(session: StoredSession): Promise<{ deck: Card[]; filters: HardFilters }> {
+  private async buildDeck(
+    session: StoredSession,
+    onBlurbs?: (blurbs: Map<string, string>) => void,
+  ): Promise<{ deck: Card[]; filters: HardFilters }> {
     const group = mergePreferences(session.members);
+    const code = session.code;
     try {
-      return { deck: await this.deckSource.buildDeck(group), filters: group.hard };
+      const deck = await this.deckSource.buildDeck(group, {
+        sessionCode: code,
+        onProgress: (stage) => this.emit({ type: 'deck-progress', code, stage }),
+        ...(onBlurbs ? { onBlurbs } : {}),
+      });
+      return { deck, filters: group.hard };
     } catch (err) {
       if (err instanceof DeckError) throw new SessionError('deck_unavailable', err.message);
       throw err;

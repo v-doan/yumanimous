@@ -8,6 +8,10 @@ import {
   PostgresApiCache,
   PostgresCardCatalog,
 } from '@yumanimous/db';
+import { createSessionServer } from '@yumanimous/mcp-session';
+import { BudgetGuard, PostgresAiCallLog } from './ai/aiCallLog.js';
+import { ClaudeDeckAgent } from './ai/deckAgent.js';
+import { AiDeckSource } from './deck/aiDeckSource.js';
 import { staticRecipeDeck, type DeckSource } from './deck/deckSource.js';
 import { RecipeDeckSource } from './deck/recipeDeckSource.js';
 import { createApp } from './http/app.js';
@@ -24,6 +28,13 @@ export interface ServerOptions {
   /** Without it, decks come from the cache (if any) or the hard-coded recipes. */
   spoonacularApiKey?: string | undefined;
   webOrigin?: string | undefined;
+  /**
+   * AI deck building (Phase 6). Needs Postgres (for the read-only session tools and
+   * the cost log) and ANTHROPIC_API_KEY in the environment. Off when omitted.
+   */
+  ai?: { model: string; monthlyBudgetUsd: number } | undefined;
+  /** Exposes GET /api/debug/ai (AI cost and latency). Development only. */
+  debugRoutes?: boolean;
   /** How long a member may be offline (refresh, tunnel, locked phone) before removal. */
   graceMs?: number;
   /** How often to look for members past the grace period. */
@@ -44,6 +55,8 @@ export async function createServer({
   databaseUrl,
   spoonacularApiKey,
   webOrigin,
+  ai,
+  debugRoutes = false,
   graceMs = 2 * MINUTE,
   presenceSweepMs = 30 * SECOND,
   now,
@@ -54,21 +67,49 @@ export async function createServer({
 
   const store =
     overrides.store ?? (pool ? new PostgresSessionStore(pool) : new InMemorySessionStore());
-  const deckSource =
-    overrides.deckSource ??
-    new RecipeDeckSource({
-      client: spoonacularApiKey ? new SpoonacularClient({ apiKey: spoonacularApiKey }) : null,
-      cache: pool ? new PostgresApiCache(pool) : new InMemoryApiCache(),
-      catalog: pool ? new PostgresCardCatalog(pool) : noopCardCatalog,
-      fallback: staticRecipeDeck,
+  const recipeDeck = new RecipeDeckSource({
+    client: spoonacularApiKey ? new SpoonacularClient({ apiKey: spoonacularApiKey }) : null,
+    cache: pool ? new PostgresApiCache(pool) : new InMemoryApiCache(),
+    catalog: pool ? new PostgresCardCatalog(pool) : noopCardCatalog,
+    fallback: staticRecipeDeck,
+  });
+
+  // AI sits on top of the recipe source: same safe candidate pool, plus a budget
+  // guard and a cost log. Without Postgres or a key, the non-AI deck is used.
+  let aiLog: PostgresAiCallLog | null = null;
+  let budget: BudgetGuard | null = null;
+  let readOnlyPool: ReturnType<typeof createPool> | null = null;
+  let aiDeck: AiDeckSource | null = null;
+  if (ai && pool && databaseUrl) {
+    aiLog = new PostgresAiCallLog(pool);
+    budget = new BudgetGuard(aiLog, ai.monthlyBudgetUsd);
+    // The agents read sessions through mcp-session on a connection Postgres keeps
+    // read-only, exactly as Claude Desktop / Claude Code do.
+    const sessionPool = createPool(databaseUrl, { readOnly: true });
+    readOnlyPool = sessionPool;
+    aiDeck = new AiDeckSource({
+      base: recipeDeck,
+      agent: new ClaudeDeckAgent({
+        model: ai.model,
+        createSessionServer: () => createSessionServer({ pool: sessionPool }),
+      }),
+      log: aiLog,
+      budget,
     });
+  } else if (ai) {
+    console.warn('[ai] AI deck building needs DATABASE_URL; using the non-AI deck.');
+  }
+  const deckSource = overrides.deckSource ?? aiDeck ?? recipeDeck;
 
   const service = new SessionService({ store, deckSource, ...(now ? { now } : {}) });
   // After a restart nobody has a socket yet. Phones reconnect within seconds and
   // flip back online; the presence sweep removes anyone who doesn't come back.
   await service.markAllOffline();
 
-  const app = createApp(service, { webOrigin });
+  const app = createApp(service, {
+    webOrigin,
+    debug: debugRoutes && aiLog && budget ? { aiLog, budget } : undefined,
+  });
   const httpServer = createHttpServer(app);
   const realtime = attachRealtime(httpServer, service, { webOrigin });
 
@@ -91,10 +132,12 @@ export async function createServer({
     port: address.port,
     url: `http://localhost:${address.port}`,
     storage: pool ? ('postgres' as const) : ('memory' as const),
+    aiEnabled: aiDeck !== null && !overrides.deckSource,
     close: async () => {
       for (const timer of timers) clearInterval(timer);
       await realtime.close(); // Also closes the HTTP server.
       await store.close();
+      await readOnlyPool?.end();
       await pool?.end();
     },
   };

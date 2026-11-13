@@ -4,6 +4,7 @@ import {
   describeHardFilters,
   hasHardFilters,
   type Card,
+  type Cuisine,
   type GroupPreferences,
   type HardFilters,
 } from '@yumanimous/shared';
@@ -69,16 +70,55 @@ export class RecipeDeckSource implements DeckSource {
   }
 
   async buildDeck(group?: GroupPreferences): Promise<Card[]> {
-    if (group && hasHardFilters(group.hard)) return this.filteredDeck(group);
+    return this.deal(await this.candidatePool(group), group);
+  }
+
+  /**
+   * Every card that may go in this group's deck: each one satisfies all of the
+   * group's hard rules. The AI deck source chooses from this same pool, so AI and
+   * non-AI decks get exactly the same safety guarantee. Throws DeckError when no
+   * safe pool can be had.
+   */
+  async candidatePool(group?: GroupPreferences): Promise<Card[]> {
+    if (group && hasHardFilters(group.hard)) return this.filteredPool(group);
 
     const pool = await this.loadPool(RecipeDeckSource.POOL_KEY, (client) =>
       client.searchMainCourses(this.opts.poolSize),
     );
     if (!pool || pool.length < this.opts.deckSize) return this.opts.fallback.buildDeck(group);
-    return this.deal(pool, group);
+    return pool;
   }
 
-  private async filteredDeck(group: GroupPreferences): Promise<Card[]> {
+  /** Whether `searchMore` can reach the recipe API. */
+  get canSearch(): boolean {
+    return this.opts.client !== null;
+  }
+
+  /**
+   * A further search for the AI scout: its extra terms, AND the group's hard filters,
+   * always. Cached like every other search.
+   */
+  async searchMore(
+    hard: HardFilters,
+    extra: { query?: string | undefined; cuisine?: Cuisine | undefined },
+  ): Promise<Card[]> {
+    const key = `${RecipeDeckSource.filteredKey(hard)}:extra:${JSON.stringify([extra.query ?? null, extra.cuisine ?? null])}`;
+    const pool = await this.loadPool(key, (client) =>
+      client.searchRecipes({
+        type: 'main course',
+        count: 15,
+        query: extra.query,
+        cuisine: extra.cuisine,
+        diets: hard.diets,
+        intolerances: hard.intolerances,
+        excludeIngredients: hard.excludeIngredients,
+        maxReadyMinutes: hard.maxReadyMinutes ?? undefined,
+      }),
+    );
+    return pool ?? [];
+  }
+
+  private async filteredPool(group: GroupPreferences): Promise<Card[]> {
     const { hard } = group;
     const pool = await this.loadPool(RecipeDeckSource.filteredKey(hard), (client) =>
       client.searchRecipes({
@@ -103,7 +143,7 @@ export class RecipeDeckSource implements DeckSource {
         `Only ${pool.length} recipe${pool.length === 1 ? '' : 's'} fit everyone’s rules (${rules}).${hint}`,
       );
     }
-    return this.deal(pool, group);
+    return pool;
   }
 
   /**
@@ -159,8 +199,8 @@ export class RecipeDeckSource implements DeckSource {
    * pool: the group's taste shows, but two sessions with the same people still get
    * different decks.
    */
-  private deal(pool: Card[], group: GroupPreferences | undefined): Card[] {
-    const size = Math.min(this.opts.deckSize, pool.length);
+  deal(pool: Card[], group: GroupPreferences | undefined, deckSize = this.opts.deckSize): Card[] {
+    const size = Math.min(deckSize, pool.length);
     if (!group) return sample(pool, size, this.opts.random);
 
     const shuffled = sample(pool, pool.length, this.opts.random); // Random tie-breaks.

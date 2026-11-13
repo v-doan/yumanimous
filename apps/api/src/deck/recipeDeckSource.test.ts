@@ -103,12 +103,14 @@ describe('RecipeDeckSource', () => {
   it('falls back to the hard-coded deck with no cache and no API', async () => {
     search.mockRejectedValue(new RecipeApiError(0, 'offline'));
     const deck = await source({ deckSize: 10 }).buildDeck();
-    expect(ids(deck)).toEqual(ids(await staticRecipeDeck.buildDeck()));
+    // Same cards, dealt in a random order like any other deck.
+    expect(ids(deck).sort()).toEqual(ids(await staticRecipeDeck.buildDeck()).sort());
   });
 
   it('falls back when no API key is configured and nothing is cached', async () => {
     const deck = await source({ client: null, deckSize: 10 }).buildDeck();
-    expect(deck[0]?.id).toBe('rainbow-chickpea-bowl');
+    expect(ids(deck)).toContain('rainbow-chickpea-bowl');
+    expect(isRecipeDeck(deck)).toBe(false);
   });
 
   it('falls back when the pool is smaller than a deck', async () => {

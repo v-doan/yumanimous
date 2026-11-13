@@ -128,6 +128,9 @@ export function attachRealtime(
       case 'match':
         io.to(event.code).emit('session:match', { cardId: event.cardId });
         break;
+      case 'deck-progress':
+        io.to(event.code).emit('deck:progress', { stage: event.stage });
+        break;
       case 'member-removed':
         for (const socket of socketsOf(event.code, event.memberId)) {
           socket.data.removed = true;

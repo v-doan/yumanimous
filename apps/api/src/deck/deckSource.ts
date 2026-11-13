@@ -17,8 +17,27 @@ export interface DeckSource {
    * Builds a deck that satisfies every hard filter in `group` (or throws DeckError),
    * ranked by its soft preferences. No `group` means nobody has stated any rules.
    */
-  buildDeck: (group?: GroupPreferences) => Promise<Card[]>;
+  buildDeck: (group?: GroupPreferences, context?: DeckBuildContext) => Promise<Card[]>;
+  /**
+   * Optional: a better order for cards nobody has swiped yet, as card ids, or null to
+   * leave the deck alone. Only the AI source implements it.
+   */
+  rerank?: (input: { sessionCode: string; cards: Card[] }) => Promise<string[] | null>;
 }
+
+/** Who the deck is for, and a way to report progress while it's being built. */
+export interface DeckBuildContext {
+  sessionCode: string;
+  onProgress?: (stage: DeckProgressStage) => void;
+  /**
+   * Blurbs that arrive after the deck was returned (card id -> blurb), already
+   * cleaned. The AI source returns the deck as soon as the order is known, so the
+   * group can start swiping while the writer is still writing.
+   */
+  onBlurbs?: (blurbs: Map<string, string>) => void;
+}
+
+export type DeckProgressStage = 'scouting' | 'curating' | 'writing';
 
 /** A deck can't be built. The message is shown to the host as-is. */
 export class DeckError extends Error {

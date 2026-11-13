@@ -6,6 +6,7 @@ import '@fontsource-variable/inter';
 import './styles/global.css';
 import { App } from './App';
 import { HomePage } from './pages/HomePage';
+import { DebugPage } from './pages/DebugPage';
 import { NotFound } from './pages/NotFound';
 import { SessionPage } from './pages/SessionPage';
 
@@ -16,6 +17,13 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <HomePage /> },
       { path: '/s/:code', element: <SessionPage /> },
+      // AI cost and latency (CLAUDE.md asks for a dev view). Not in production builds.
+      ...(import.meta.env.DEV
+        ? [
+            { path: '/debug', element: <DebugPage /> },
+            { path: '/debug/s/:code', element: <DebugPage /> },
+          ]
+        : []),
       { path: '*', element: <NotFound /> },
     ],
   },

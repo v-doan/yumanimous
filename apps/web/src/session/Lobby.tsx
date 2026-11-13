@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { matchRules, type MemberPreferences, type SessionView } from '@yumanimous/shared';
+import {
+  matchRules,
+  type DeckProgressStage,
+  type MemberPreferences,
+  type SessionView,
+} from '@yumanimous/shared';
 import { GroupRules } from './GroupRules';
 import { MemberList } from './MemberList';
 import { PreferencesPanel } from './PreferencesPanel';
@@ -11,10 +16,19 @@ interface LobbyProps {
   myId: string;
   onStart: () => Promise<void>;
   onSavePreferences: (preferences: MemberPreferences) => Promise<boolean>;
+  /** Live AI deck-building stage, shown to everyone while the host's Start runs. */
+  deckProgress?: DeckProgressStage | null;
 }
 
+const PROGRESS_TEXT: Record<DeckProgressStage, string> = {
+  scouting: 'Scouting recipes for your group…',
+  curating: 'Picking dishes everyone will like…',
+  writing: 'Writing the cards…',
+  reranked: '',
+};
+
 /** Waiting room: share the link, watch friends arrive, host taps Start. */
-export function Lobby({ view, myId, onStart, onSavePreferences }: LobbyProps) {
+export function Lobby({ view, myId, onStart, onSavePreferences, deckProgress }: LobbyProps) {
   const me = view.members.find((m) => m.id === myId);
   const isHost = me?.isHost ?? false;
   const host = view.members.find((m) => m.isHost);
@@ -45,6 +59,12 @@ export function Lobby({ view, myId, onStart, onSavePreferences }: LobbyProps) {
 
       <PreferencesPanel saved={me?.preferences ?? null} onSave={onSavePreferences} />
       <GroupRules view={view} />
+
+      {deckProgress && (
+        <p className={ui.muted} role="status" aria-live="polite">
+          {PROGRESS_TEXT[deckProgress]}
+        </p>
+      )}
 
       {isHost ? (
         <button

@@ -1,4 +1,6 @@
+import { useCallback, useState } from 'react';
 import { describeHardFilters, mergePreferences, type SessionView } from '@yumanimous/shared';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import ui from '../ui/ui.module.css';
 import styles from './GroupRules.module.css';
 
@@ -46,6 +48,8 @@ export function UncoveredWarning({
   isHost: boolean;
   onRebuild: () => void;
 }) {
+  const [confirming, setConfirming] = useState(false);
+  const cancel = useCallback(() => setConfirming(false), []);
   if (!view.uncovered.length) return null;
   const text = view.uncovered.map((u) => `${u.rule} (${u.members.join(', ')})`).join(', ');
 
@@ -55,18 +59,23 @@ export function UncoveredWarning({
         ⚠ This deck wasn’t filtered for: <strong>{text}</strong>.
       </span>
       {isHost ? (
-        <button
-          type="button"
-          className={styles.rebuild}
-          onClick={() => {
-            if (window.confirm('Rebuild the deck for everyone’s rules? All votes will be cleared.'))
-              onRebuild();
-          }}
-        >
+        <button type="button" className={styles.rebuild} onClick={() => setConfirming(true)}>
           Rebuild deck
         </button>
       ) : (
         <span> The host can rebuild the deck.</span>
+      )}
+      {confirming && (
+        <ConfirmDialog
+          title="Rebuild the deck?"
+          message="A new deck for everyone’s current food rules. All votes so far will be cleared."
+          confirmLabel="Rebuild"
+          onConfirm={() => {
+            setConfirming(false);
+            onRebuild();
+          }}
+          onCancel={cancel}
+        />
       )}
     </div>
   );

@@ -111,13 +111,27 @@ describe('GroupRules', () => {
 describe('UncoveredWarning', () => {
   const view = sessionView({ uncovered: [{ rule: 'no shellfish', members: ['Kim'] }] });
 
-  it('lets the host rebuild after confirming', async () => {
+  it('lets the host rebuild after confirming in the app’s own dialog', async () => {
     const onRebuild = vi.fn();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<UncoveredWarning view={view} isHost onRebuild={onRebuild} />);
-    expect(screen.getByRole('alert')).toHaveTextContent('no shellfish (Kim)');
+    expect(screen.getByText(/This deck wasn’t filtered for/)).toHaveTextContent(
+      'no shellfish (Kim)',
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Rebuild deck' }));
+    expect(onRebuild).not.toHaveBeenCalled(); // Asks first.
+    const dialog = screen.getByRole('alertdialog', { name: 'Rebuild the deck?' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Rebuild' }));
     expect(onRebuild).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('does nothing when the host cancels', async () => {
+    const onRebuild = vi.fn();
+    render(<UncoveredWarning view={view} isHost onRebuild={onRebuild} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Rebuild deck' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onRebuild).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
   it('tells guests the host can rebuild', () => {

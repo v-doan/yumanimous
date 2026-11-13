@@ -86,6 +86,44 @@ describe.skipIf(!databaseUrl)('Postgres-specific guarantees', () => {
     }
   });
 
+  // Regression: AI blurbs used to live only in the first broadcast, because a session
+  // stored references into the shared catalog, which already had the template text.
+  it('each session keeps its own copy of a card, so AI blurbs survive reloads', async () => {
+    const catalogCard: Card = { id: 'spoonacular:7', title: 'Dahl', tags: [], blurb: 'Template.' };
+    await new PostgresCardCatalog(db.pool).save([
+      { card: catalogCard, source: 'spoonacular', facts: {} },
+    ]);
+    const dealt = (blurb: string): DeckSource => ({
+      mode: 'cook-in',
+      buildDeck: async () => [{ ...catalogCard, blurb }],
+    });
+
+    const a = new SessionService({
+      store: new PostgresSessionStore(db.pool),
+      deckSource: dealt('Silky lentils for session A.'),
+    });
+    const b = new SessionService({
+      store: new PostgresSessionStore(db.pool),
+      deckSource: dealt('Spicy lentils for session B.'),
+    });
+    const hostA = await a.create({ hostName: 'A', matchRule: 'everyone' });
+    const hostB = await b.create({ hostName: 'B', matchRule: 'everyone' });
+    await a.start(hostA.code, hostA.memberId);
+    await b.start(hostB.code, hostB.memberId);
+    // A swipe forces a full load-modify-save round trip through Postgres.
+    await a.swipe(hostA.code, hostA.memberId, { cardId: catalogCard.id, direction: 'like' });
+
+    const fresh = new SessionService({ store: new PostgresSessionStore(db.pool), deckSource });
+    expect((await fresh.view(hostA.code)).deck[0]!.blurb).toBe('Silky lentils for session A.');
+    expect((await fresh.view(hostB.code)).deck[0]!.blurb).toBe('Spicy lentils for session B.');
+    // The shared catalog row is untouched.
+    const { rows } = await db.pool.query(
+      "SELECT card->>'blurb' AS blurb FROM cards WHERE id = $1",
+      [catalogCard.id],
+    );
+    expect(rows[0].blurb).toBe('Template.');
+  });
+
   it('survives a "restart": a new store instance sees the same session', async () => {
     const before = newService();
     const host = await before.create({ hostName: 'Host', matchRule: 'majority' });

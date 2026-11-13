@@ -83,7 +83,9 @@ async function readSnapshot(db: pg.PoolClient, code: string): Promise<SessionSna
     [code],
   );
   const deck = await db.query<{ card: unknown }>(
-    `SELECT c.card FROM session_cards sc JOIN cards c ON c.id = sc.card_id
+    // The session's own copy of each card; the catalog for rows from before it existed.
+    `SELECT COALESCE(sc.card, c.card) AS card
+     FROM session_cards sc JOIN cards c ON c.id = sc.card_id
      WHERE sc.session_code = $1 ORDER BY sc.position`,
     [code],
   );
