@@ -162,7 +162,17 @@ describe('the deployed server', () => {
       expect(res.headers.get('referrer-policy')).toBe('no-referrer');
       expect(res.headers.get('x-content-type-options')).toBe('nosniff');
       expect(res.headers.get('x-powered-by')).toBeNull();
+      expect(res.headers.get('permissions-policy')).toContain('camera=()');
+      expect(res.headers.get('permissions-policy')).toContain('geolocation=()');
     }
+  });
+
+  it('never lets API responses (which can carry rejoin tokens) be cached', async () => {
+    await start();
+    const created = await createSession();
+    expect(created.headers.get('cache-control')).toBe('no-store');
+    const preview = await fetch(`${server!.url}/api/sessions/ABCDEF`);
+    expect(preview.headers.get('cache-control')).toBe('no-store');
   });
 
   it('serves the web app: routes get index.html uncached, hashed assets cached for a year', async () => {

@@ -84,6 +84,8 @@ jobs:
           DATABASE_OWNER_URL: ${{ secrets.DATABASE_OWNER_URL }}
       - uses: superfly/flyctl-actions/setup-flyctl@fc53c09e1bc3be6f54706524e3b82c4f462f77be # 1.5
       - name: Deploy to Fly
-        run: flyctl deploy --remote-only
+        # --ha=false: exactly one machine (presence, locks and rate limits live in
+        # one process; Fly would otherwise add a second for redundancy).
+        run: flyctl deploy --remote-only --ha=false
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

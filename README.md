@@ -218,6 +218,57 @@ Why not saved groups? Without accounts, a "saved group" is a fragile half-accoun
 browser's storage), and it adds steps to a flow whose point is _open the link, type a name, swipe_.
 Link sessions stay one-time by design.
 
+## Security
+
+Deployed publicly, so it assumes hostile traffic. Every item below has a test, and
+the deployed site is probed with [a script](#deploying) and an OWASP ZAP baseline scan
+(0 failures).
+
+- **Abuse and cost limits** ([`limits.ts`](apps/api/src/security/limits.ts)): per-IP limits on
+  creating (10/hour), joining, previewing (no guessing codes) and connecting; per-socket
+  throttles; 12 AI- or quota-spending actions per IP per hour; per-session caps on rebuilds,
+  rounds and shopping lists; at most 300 active sessions; AI capped at $0.50/day and $8/month.
+  Past a limit the app degrades to the non-AI deck and friendly messages. The client IP is
+  taken from exactly one trusted proxy hop, so a forged `X-Forwarded-For` doesn't get around
+  any of it.
+- **Headers**: a strict Content Security Policy (no inline script or style, sockets only back
+  to the site, images only from the recipe CDNs), HSTS, `no-referrer` (session codes are in
+  URLs), `nosniff`, `frame-ancestors 'none'`, a Permissions-Policy that turns every device
+  feature off, and `no-store` on API responses (they can carry rejoin tokens). The web app is
+  served from the API's own origin, so there is no CORS to get wrong; sockets refuse other
+  origins.
+- **Input**: everything from clients and from the model is validated with Zod; request bodies
+  are capped at 10 KB; guest names and recipe text reach models only as JSON values.
+- **Secrets**: rejoin tokens are random and stored only as hashes. API keys live in Fly
+  secrets. The agent runtime gets an allowlisted environment: it never sees database URLs or
+  the recipe key.
+- **Database least privilege** ([`roles.ts`](packages/db/src/roles.ts)): the app's role can't
+  change the schema; the agents' role is SELECT-only and has no access to token hashes, even
+  if a connection turns read-only mode off. Migrations run in CI as the owner, so the owner
+  credentials never reach the server. Roles are checked for elevated rights before use.
+- **Startup guard** ([`config.ts`](apps/api/src/config.ts)): in production the API refuses to
+  start with a debug route or tracing on, a database connection without verified TLS, or a
+  required setting missing.
+- **Supply chain**: the base image is pinned by digest; installs use the lockfile with install
+  scripts off; the container runs as a non-root user that can't modify its own code; CI fails
+  on any production advisory, runs CodeQL, and pins every action to a commit; Dependabot
+  proposes updates after a 7-day cooldown.
+
+## Deploying
+
+Fly.io (one always-on machine: presence, locks and limits live in one process) and Neon
+Postgres. One-time setup:
+
+1. Create a Neon project, a Fly app (`fly apps create`), a production Anthropic key with a
+   spend limit, and a Spoonacular key.
+2. `npm run setup:prod`: asks for the Neon owner URL and the keys (hidden input), creates the
+   least-privilege roles with random passwords, and pipes every runtime secret into
+   `fly secrets import`.
+3. In GitHub, an environment `production` with `FLY_API_TOKEN` (`fly tokens create deploy`) and
+   `DATABASE_OWNER_URL`.
+
+After that, every push to `main` that passes CI migrates the database and deploys.
+
 ## Persistence
 
 Postgres holds sessions, members, swipes and matches (schema:

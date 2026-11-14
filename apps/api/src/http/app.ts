@@ -71,6 +71,21 @@ export function createApp(
   if (trustedProxies > 0) app.set('trust proxy', trustedProxies);
 
   app.use(securityHeaders(publicOrigin));
+  app.use((_req, res, next) => {
+    // The app needs no powerful browser features; switch them all off.
+    res.setHeader(
+      'Permissions-Policy',
+      'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), ' +
+        'magnetometer=(), gyroscope=(), accelerometer=(), display-capture=(), browsing-topics=()',
+    );
+    next();
+  });
+  // API responses are live data, and creating or joining returns a rejoin token:
+  // no browser or proxy may store them.
+  app.use(['/api', '/health'], (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
   // Requests here are tiny (a name, a rule). A small cap stops oversized payloads early.
   app.use(express.json({ limit: '10kb' }));
   if (webOrigin) app.use(cors(webOrigin));
