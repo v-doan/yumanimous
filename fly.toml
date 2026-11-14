@@ -1,0 +1,41 @@
+# Fly.io: one always-on machine running the API, which also serves the web app.
+#
+# Exactly one machine on purpose: presence, per-session locks and the rate-limit
+# counters live in that process. Secrets (keys, database URLs) are set with
+# `fly secrets set`, never here. Migrations run in CI as the schema owner before
+# each deploy, so there is no release_command and no owner credential on Fly.
+app = 'yumanimous'
+primary_region = 'iad'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  PUBLIC_ORIGIN = 'https://yumanimous.fly.dev'
+  # Fly's edge is the one proxy in front of the app (see TRUSTED_PROXIES in config.ts).
+  TRUSTED_PROXIES = '1'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Live sessions hold WebSockets open: never stop the machine to save money.
+  auto_stop_machines = 'off'
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = 'connections'
+    soft_limit = 400
+    hard_limit = 500
+
+  [[http_service.checks]]
+    method = 'GET'
+    path = '/health'
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '20s'
+
+[[vm]]
+  # The Agent SDK runs its CLI as a subprocess per AI run; 1 GB leaves headroom.
+  size = 'shared-cpu-1x'
+  memory = '1gb'

@@ -73,6 +73,13 @@ export class PostgresSessionStore implements SessionStore {
     await this.pool.query('DELETE FROM sessions WHERE code = $1', [code]);
   }
 
+  async count() {
+    const { rows } = await this.pool.query<{ n: number }>(
+      'SELECT count(*)::int AS n FROM sessions',
+    );
+    return rows[0]?.n ?? 0;
+  }
+
   async idleSince(cutoff: number) {
     const { rows } = await this.pool.query<{ code: string }>(
       'SELECT code FROM sessions WHERE updated_at < $1',
@@ -130,6 +137,7 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
     mediated_at: Date | null;
     round: number;
     past_rounds: unknown;
+    rebuilds: number;
     updated_at: Date;
   }>(`SELECT * FROM sessions WHERE code = $1 ${forUpdate ? 'FOR UPDATE' : ''}`, [code]);
   const row = session.rows[0];
@@ -207,6 +215,7 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
     mediatedAt: toMs(row.mediated_at),
     round: row.round,
     pastRounds: PastRoundSchema.array().parse(row.past_rounds),
+    rebuilds: row.rebuilds,
     updatedAt: row.updated_at.getTime(),
   };
   return stored;
@@ -263,7 +272,7 @@ async function persistDiff(db: pg.PoolClient, before: StoredSession, after: Stor
   await db.query(
     `UPDATE sessions SET status = $2, host_id = $3, match_rule = $4, deck_filters = $5,
        reranked_at = $6, updated_at = $7, suggestion = $8, mediated_at = $9, round = $10,
-       past_rounds = $11 WHERE code = $1`,
+       past_rounds = $11, rebuilds = $12 WHERE code = $1`,
     [
       after.code,
       after.status,
@@ -277,6 +286,7 @@ async function persistDiff(db: pg.PoolClient, before: StoredSession, after: Stor
       after.round,
       // pg would send a JS array as a Postgres array; jsonb needs it as JSON text.
       JSON.stringify(after.pastRounds),
+      after.rebuilds,
     ],
   );
 

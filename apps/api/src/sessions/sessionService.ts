@@ -47,7 +47,8 @@ export type SessionErrorCode =
   | 'unknown_card'
   | 'deck_unavailable'
   | 'not_allowed'
-  | 'no_list';
+  | 'no_list'
+  | 'busy';
 
 /** An expected, user-facing failure. Its message is safe to show to clients. */
 export class SessionError extends Error {
@@ -84,9 +85,30 @@ const HOST_ONLY: Record<DeckJobKind, string> = {
  */
 const MEDIATION_STALE_MS = 2 * 60_000;
 
+/**
+ * Phase 9: caps on what one session can spend. Each rebuild, round and shopping list
+ * can cost an AI run, so a session can't repeat them without end.
+ */
+export interface SessionCaps {
+  maxRebuilds: number;
+  /** Rounds per session: every earlier round stays in memory (MAX_PAST_ROUNDS). */
+  maxRounds: number;
+  maxListsPerRound: number;
+  /** Sessions that may exist at once; null for no cap (tests, local dev). */
+  maxActiveSessions: number | null;
+}
+
+export const DEFAULT_CAPS: SessionCaps = {
+  maxRebuilds: 3,
+  maxRounds: MAX_PAST_ROUNDS + 1,
+  maxListsPerRound: 5,
+  maxActiveSessions: null,
+};
+
 export interface SessionServiceOptions {
   store: SessionStore;
   deckSource: DeckSource;
+  caps?: Partial<SessionCaps>;
   /** Phase 7: shopping lists and the no-match mediator. Off when omitted. */
   followUps?: FollowUps;
   /** Injected so tests can control time. */
@@ -106,12 +128,14 @@ export class SessionService {
   /** The deck build running for each session, if any (see deckJob). */
   private readonly deckJobs = new Map<string, { kind: DeckJobKind; promise: Promise<void> }>();
   private readonly followUps: FollowUps | null;
+  private readonly caps: SessionCaps;
   /** Shopping lists being made, by `${code}:${cardId}` (one run per list). */
   private readonly listJobs = new Map<string, Promise<void>>();
   /** Background mediator runs, so tests (and shutdown) can wait for them. */
   private readonly background = new Set<Promise<void>>();
 
-  constructor({ store, deckSource, followUps, now = Date.now }: SessionServiceOptions) {
+  constructor({ store, deckSource, followUps, caps, now = Date.now }: SessionServiceOptions) {
+    this.caps = { ...DEFAULT_CAPS, ...caps };
     this.store = store;
     this.deckSource = deckSource;
     this.followUps = followUps ?? null;
@@ -125,6 +149,13 @@ export class SessionService {
 
   /** The deck isn't built yet: it waits for everyone's food rules, at the start. */
   async create(input: { hostName: string; matchRule: MatchRuleId }): Promise<Membership> {
+    const max = this.caps.maxActiveSessions;
+    if (max !== null && (await this.store.count()) >= max) {
+      throw new SessionError(
+        'busy',
+        'Yumanimous is very busy right now. Try again in a little while.',
+      );
+    }
     const token = generateToken();
     const host = this.newMember(input.hostName, token);
 
@@ -147,6 +178,7 @@ export class SessionService {
         mediatedAt: null,
         round: 1,
         pastRounds: [],
+        rebuilds: 0,
         updatedAt: this.now(),
       };
       if (await this.store.create(session)) {
@@ -258,6 +290,18 @@ export class SessionService {
       if (kind === 'rebuild' && (running || session.status !== 'swiping')) {
         throw new SessionError('not_started', 'The host has not started yet');
       }
+      if (kind === 'rebuild' && session.rebuilds >= this.caps.maxRebuilds) {
+        throw new SessionError(
+          'not_allowed',
+          `The deck can be rebuilt ${this.caps.maxRebuilds} times per session. Start a new session for a fresh one.`,
+        );
+      }
+      if (kind === 'replay' && session.round >= this.caps.maxRounds) {
+        throw new SessionError(
+          'not_allowed',
+          `That was the last round (${this.caps.maxRounds} per session). Start a new session to keep going.`,
+        );
+      }
       if (kind === 'replay' && (running || !canPlayAgain(session))) {
         throw new SessionError(
           'not_allowed',
@@ -308,6 +352,8 @@ export class SessionService {
           // Archived from the latest state: votes cast while the deck was building count.
           current.pastRounds = withArchived(current);
           current.round += 1;
+        } else {
+          current.rebuilds += 1;
         }
         current.swipes = [];
         current.matches = [];
@@ -428,6 +474,12 @@ export class SessionService {
         const existing = session.shoppingLists.find((l) => l.cardId === cardId);
         // A failed list can be retried; one stuck "building" after a restart too.
         if (existing?.status === 'ready') return false;
+        if (!existing && session.shoppingLists.length >= this.caps.maxListsPerRound) {
+          throw new SessionError(
+            'not_allowed',
+            `That's ${this.caps.maxListsPerRound} shopping lists this round, the most there can be.`,
+          );
+        }
         const card = session.deck.find((c) => c.id === cardId)!;
         const placeholder: ShoppingList = {
           cardId,

@@ -16,7 +16,8 @@
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present && tsc -p scripts",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db:roles": "npm run -s db:roles -w @yumanimous/db"
   },
   "engines": {
     "node": ">=22.22.2"

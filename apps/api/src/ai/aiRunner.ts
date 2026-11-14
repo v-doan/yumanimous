@@ -21,14 +21,15 @@ export class AiRunner {
     this.warn = opts.warn ?? ((m) => console.warn(m));
   }
 
-  /** False (and logged as skipped) once this month's spend reaches the budget. */
+  /** False (and logged as skipped) once this month's or today's spend reaches its cap. */
   async withinBudget(sessionCode: string, kind: AiCallKind): Promise<boolean> {
     const budget = await this.opts.budget.status();
     if (budget.allowed) return true;
     this.warn(
-      `[ai] monthly budget reached ($${budget.spentUsd.toFixed(2)} of $${budget.budgetUsd}); skipping ${kind}`,
+      `[ai] AI budget reached ($${budget.spentUsd.toFixed(2)} of $${budget.budgetUsd} this month` +
+        `${budget.todayUsd !== undefined ? `, $${budget.todayUsd.toFixed(2)} of $${budget.dailyBudgetUsd} today` : ''}); skipping ${kind}`,
     );
-    await this.record(sessionCode, kind, 'skipped', null, 'Monthly AI budget reached');
+    await this.record(sessionCode, kind, 'skipped', null, 'AI budget reached');
     return false;
   }
 

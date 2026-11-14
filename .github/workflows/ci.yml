@@ -1,0 +1,89 @@
+# Every push and pull request: lint, typecheck, tests (with a real Postgres), a
+# production dependency audit, and a build. Pushes to main that pass are deployed.
+#
+# Hardening: actions are pinned to commit SHAs (a moved tag can't change what
+# runs), the token is read-only by default, install scripts are off, and the
+# production secrets exist only in the `production` environment's deploy job.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci" --health-interval 2s --health-timeout 3s --health-retries 15
+    env:
+      # Tests use this server instead of starting their own containers.
+      TEST_DATABASE_URL: postgres://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts --no-fund
+      # Fails on any known vulnerability in what ships. Dev-only tools are reported
+      # below without failing the build (they never reach the server).
+      - run: npm audit --omit=dev --audit-level=low
+      - run: npm audit --audit-level=critical || true
+      - run: npx prettier --check .
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build -w @yumanimous/web
+
+  deploy:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # Secrets live in this environment only; it can require approval in the repo
+    # settings, and runs one deploy at a time.
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts --no-fund
+      # Migrations and grants run here, as the schema owner, BEFORE the new version
+      # starts. The owner credentials never reach Fly, so the running app can't
+      # change the schema even if it were compromised. Migrations are additive, so
+      # the old version keeps working until the new one replaces it.
+      - name: Migrate the database
+        run: npm run db:migrate -w @yumanimous/db
+        env:
+          DATABASE_OWNER_URL: ${{ secrets.DATABASE_OWNER_URL }}
+      - uses: superfly/flyctl-actions/setup-flyctl@fc53c09e1bc3be6f54706524e3b82c4f462f77be # 1.5
+      - name: Deploy to Fly
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -50,6 +50,8 @@ export interface StoredSession {
   round: number;
   /** Earlier rounds, oldest first, at most MAX_PAST_ROUNDS. */
   pastRounds: PastRound[];
+  /** Phase 9: how many times the host rebuilt the deck (capped; each is an AI run). */
+  rebuilds: number;
   updatedAt: number;
 }
 
@@ -80,6 +82,8 @@ export interface SessionStore {
   delete: (code: string) => Promise<void>;
   /** Codes of sessions not updated since `cutoff` (epoch ms). */
   idleSince: (cutoff: number) => Promise<string[]>;
+  /** How many sessions exist (for the global cap on active sessions). */
+  count: () => Promise<number>;
   /** Members who have been offline since before `cutoff` (epoch ms). */
   disconnectedBefore: (cutoff: number) => Promise<{ code: string; memberId: string }[]>;
   /** On startup no member has a socket yet, so everyone starts offline as of `at`. */
@@ -120,6 +124,10 @@ export class InMemorySessionStore implements SessionStore {
 
   async delete(code: string) {
     this.sessions.delete(code);
+  }
+
+  async count() {
+    return this.sessions.size;
   }
 
   async idleSince(cutoff: number) {

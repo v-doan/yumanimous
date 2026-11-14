@@ -953,9 +953,9 @@ describe.each(['memory', 'postgres'] as const)('SessionService with %s store', (
         expect(stored!.pastRounds[0]!.swipes.length).toBeGreaterThan(0);
       });
 
-      it('keeps at most 5 earlier rounds', async () => {
+      it('remembers every earlier round, up to the last round allowed', async () => {
         const { code, host, sam } = await decidedRound();
-        for (let r = 0; r < 6; r++) {
+        for (let r = 0; r < 5; r++) {
           await service.playAgain(code, host);
           nextDeck = [{ id: `r${r}`, title: `R${r}`, tags: [], blurb: 'Yum.' }];
           const { deck: current } = await service.view(code);
@@ -964,8 +964,12 @@ describe.each(['memory', 'postgres'] as const)('SessionService with %s store', (
           }
         }
         const stored = await store.get(code);
-        expect(stored!.round).toBe(7);
-        expect(stored!.pastRounds.map((r) => r.round)).toEqual([2, 3, 4, 5, 6]);
+        expect(stored!.round).toBe(6);
+        expect(stored!.pastRounds.map((r) => r.round)).toEqual([1, 2, 3, 4, 5]);
+        await expect(service.playAgain(code, host)).rejects.toMatchObject({
+          code: 'not_allowed',
+          message: expect.stringContaining('last round'),
+        });
       });
     });
 

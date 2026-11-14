@@ -56,7 +56,7 @@ export function lockedDownOptions(args: {
     // orchestrator's turn and restarts it when done, re-reading everything. That
     // made runs slower and up to 4x dearer, depending on the model's whim. This
     // makes every subagent run inline (the prompt asks for it as well).
-    env: { ...definedEnv(), CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1' },
+    env: { ...agentEnv(), CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1' },
     mcpServers: Object.fromEntries(
       Object.entries(args.mcpServers).map(([name, instance]) => [
         name,
@@ -200,9 +200,35 @@ function describeMessage(message: SDKMessage, ms: number): string {
   return `${at} ${message.type}${'subtype' in message ? ` ${String(message.subtype)}` : ''}`;
 }
 
-/** process.env without undefined values, as the SDK's `env` option expects. */
-function definedEnv(): Record<string, string> {
+/**
+ * The only environment the agent runtime (a subprocess) gets. An allowlist, not
+ * process.env: the agents never need the database URLs or the recipe key, so they
+ * never see them. The rest are what a process needs to run at all (and, on Windows
+ * dev machines, to find its profile folders).
+ */
+const AGENT_ENV = [
+  'ANTHROPIC_API_KEY',
+  'PATH',
+  'HOME',
+  'TMPDIR',
+  'LANG',
+  'CLAUDE_CONFIG_DIR',
+  'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC',
+  'DISABLE_AUTOUPDATER',
+  // Windows
+  'SYSTEMROOT',
+  'SystemRoot',
+  'USERPROFILE',
+  'APPDATA',
+  'LOCALAPPDATA',
+  'TEMP',
+  'TMP',
+  'PATHEXT',
+  'COMSPEC',
+];
+
+export function agentEnv(env: NodeJS.ProcessEnv = process.env): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(process.env).filter((e): e is [string, string] => e[1] !== undefined),
+    AGENT_ENV.flatMap((name) => (env[name] !== undefined ? [[name, env[name]!]] : [])),
   );
 }

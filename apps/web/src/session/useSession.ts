@@ -43,6 +43,7 @@ export function useSession(membership: Membership) {
     // so a dropped connection rejoins as the same member.
     const socket: AppSocket = io(API_URL || undefined, { auth: { code, token } });
     socketRef.current = socket;
+    let retry: ReturnType<typeof setTimeout> | undefined;
 
     const end = (reason: EndReason) => {
       clearIdentity(code);
@@ -76,9 +77,15 @@ export function useSession(membership: Membership) {
       // Auth failures are final (session gone, or this member was removed). Anything
       // else is a network problem, which socket.io keeps retrying.
       if (err.message === 'unauthorized') end('invalid-identity');
+      // Too many connections from this network (the server refuses in middleware,
+      // which socket.io doesn't retry on its own): try again a little later.
+      if (err.message === 'rate_limited') {
+        retry = setTimeout(() => socket.connect(), 15_000);
+      }
     });
 
     return () => {
+      clearTimeout(retry);
       socket.removeAllListeners();
       socket.disconnect();
       socketRef.current = null;

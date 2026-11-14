@@ -28,12 +28,19 @@ export interface AiCallLog {
   record: (call: AiCall) => Promise<void>;
   /** Total cost since the start of the current calendar month (UTC). */
   monthToDateUsd: (now: number) => Promise<number>;
+  /** Total cost since the start of the current day (UTC). */
+  dayToDateUsd: (now: number) => Promise<number>;
   list: (filter: { sessionCode?: string; limit: number }) => Promise<LoggedAiCall[]>;
 }
 
 const monthStart = (now: number) => {
   const d = new Date(now);
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1);
+};
+
+const dayStart = (now: number) => {
+  const d = new Date(now);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 };
 
 /** Errors can quote model output; keep the log readable and bounded. */
@@ -54,7 +61,14 @@ export class InMemoryAiCallLog implements AiCallLog {
   }
 
   async monthToDateUsd(now: number) {
-    const start = monthStart(now);
+    return this.spentSince(monthStart(now));
+  }
+
+  async dayToDateUsd(now: number) {
+    return this.spentSince(dayStart(now));
+  }
+
+  private spentSince(start: number) {
     return this.calls
       .filter((c) => Date.parse(c.createdAt) >= start)
       .reduce((sum, c) => sum + c.costUsd, 0);
@@ -94,9 +108,17 @@ export class PostgresAiCallLog implements AiCallLog {
   }
 
   async monthToDateUsd(now: number) {
+    return this.spentSince(monthStart(now));
+  }
+
+  async dayToDateUsd(now: number) {
+    return this.spentSince(dayStart(now));
+  }
+
+  private async spentSince(start: number) {
     const { rows } = await this.pool.query<{ total: string | null }>(
       'SELECT sum(cost_usd) AS total FROM ai_calls WHERE created_at >= $1',
-      [new Date(monthStart(now))],
+      [new Date(start)],
     );
     return Number(rows[0]?.total ?? 0);
   }
@@ -142,19 +164,35 @@ export class PostgresAiCallLog implements AiCallLog {
 }
 
 /**
- * The app's own spending cap, below the Console's hard limit. Checked before every
- * run; when this month's logged spend reaches it, AI features switch off and the
- * non-AI deck is used until the month rolls over.
+ * The app's own spending caps, below the Console's hard limit. Checked before every
+ * run; when this month's (or, if set, today's) logged spend reaches its cap, AI
+ * features switch off and the non-AI versions are used until it rolls over.
+ *
+ * The daily cap is what keeps a public deployment usable: without it, one busy (or
+ * abusive) day could spend the whole month's budget.
  */
 export class BudgetGuard {
   constructor(
     private readonly log: AiCallLog,
     private readonly monthlyUsd: number,
     private readonly now: () => number = Date.now,
+    private readonly dailyUsd: number | null = null,
   ) {}
 
   async status() {
-    const spent = await this.log.monthToDateUsd(this.now());
-    return { spentUsd: spent, budgetUsd: this.monthlyUsd, allowed: spent < this.monthlyUsd };
+    const now = this.now();
+    const spent = await this.log.monthToDateUsd(now);
+    const monthOk = spent < this.monthlyUsd;
+    if (this.dailyUsd === null) {
+      return { spentUsd: spent, budgetUsd: this.monthlyUsd, allowed: monthOk };
+    }
+    const today = await this.log.dayToDateUsd(now);
+    return {
+      spentUsd: spent,
+      budgetUsd: this.monthlyUsd,
+      todayUsd: today,
+      dailyBudgetUsd: this.dailyUsd,
+      allowed: monthOk && today < this.dailyUsd,
+    };
   }
 }

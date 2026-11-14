@@ -1,40 +1,28 @@
-import { z } from 'zod';
+import { ConfigError, loadConfig } from './config.js';
 import { createServer } from './createServer.js';
 
-const env = z
-  .object({
-    PORT: z.coerce.number().int().positive().default(3001),
-    // Postgres; without it sessions live in memory and are lost on restart.
-    DATABASE_URL: z.string().optional(),
-    // Recipe API; without it decks come from the cache or the hard-coded recipes.
-    SPOONACULAR_API_KEY: z.string().optional(),
-    // Only needed when the web app is served from a different origin (production).
-    WEB_ORIGIN: z.url().optional(),
-    // AI deck building (Phase 6). The Agent SDK reads the key itself.
-    ANTHROPIC_API_KEY: z.string().optional(),
-    AI_MODEL: z.string().default('claude-haiku-5-5'),
-    // The app's own monthly cap, below the Console spend limit.
-    AI_MONTHLY_BUDGET_USD: z.coerce.number().positive().default(8),
-    // Development only: GET /api/debug/ai (AI cost and latency).
-    DEBUG_ROUTES: z.enum(['true', 'false']).default('false'),
-    // Development only: one console line per agent message (which tools ran, when).
-    AI_TRACE: z.enum(['true', 'false']).default('false'),
-  })
-  .parse(process.env);
+let config;
+try {
+  config = loadConfig(process.env);
+} catch (err) {
+  if (!(err instanceof ConfigError)) throw err;
+  console.error(`\n${err.message}\n`);
+  process.exit(1);
+}
 
 const server = await createServer({
-  port: env.PORT,
-  databaseUrl: env.DATABASE_URL || undefined,
-  spoonacularApiKey: env.SPOONACULAR_API_KEY || undefined,
-  webOrigin: env.WEB_ORIGIN,
-  ai: env.ANTHROPIC_API_KEY
-    ? {
-        model: env.AI_MODEL,
-        monthlyBudgetUsd: env.AI_MONTHLY_BUDGET_USD,
-        trace: env.AI_TRACE === 'true',
-      }
-    : undefined,
-  debugRoutes: env.DEBUG_ROUTES === 'true',
+  port: config.port,
+  databaseUrl: config.databaseUrl,
+  readerDatabaseUrl: config.readerDatabaseUrl,
+  runMigrations: config.runMigrations,
+  spoonacularApiKey: config.spoonacularApiKey,
+  webOrigin: config.webOrigin,
+  publicOrigin: config.publicOrigin,
+  staticDir: config.staticDir,
+  trustedProxies: config.trustedProxies,
+  limits: config.limits,
+  ai: config.ai,
+  debugRoutes: config.debugRoutes,
 }).catch((err: NodeJS.ErrnoException & { errors?: NodeJS.ErrnoException[] }) => {
   // pg reports "nothing listening" as ECONNREFUSED (an AggregateError for IPv4 + IPv6).
   const refused = err.code === 'ECONNREFUSED' || err.errors?.some((e) => e.code === 'ECONNREFUSED');
@@ -52,12 +40,13 @@ console.log(
   `  sessions: ${server.storage === 'postgres' ? 'Postgres' : 'in memory (no DATABASE_URL)'}`,
 );
 console.log(
-  `  recipes:  ${env.SPOONACULAR_API_KEY ? 'Spoonacular (cached pool)' : 'hard-coded deck (no SPOONACULAR_API_KEY)'}`,
+  `  recipes:  ${config.spoonacularApiKey ? 'Spoonacular (cached pool)' : 'hard-coded deck (no SPOONACULAR_API_KEY)'}`,
 );
 
 console.log(
-  `  ai deck:  ${server.aiEnabled ? `${env.AI_MODEL}, budget $${env.AI_MONTHLY_BUDGET_USD}/month` : 'off (needs ANTHROPIC_API_KEY and DATABASE_URL)'}`,
+  `  ai deck:  ${server.aiEnabled && config.ai ? `${config.ai.model}, budget $${config.ai.monthlyBudgetUsd}/month${config.ai.dailyBudgetUsd ? `, $${config.ai.dailyBudgetUsd}/day` : ''}` : 'off (needs ANTHROPIC_API_KEY and DATABASE_URL)'}`,
 );
+console.log(`  limits:   ${config.limits ? 'on' : 'off (development)'}`);
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {

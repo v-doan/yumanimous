@@ -1,0 +1,33 @@
+# Weekly update PRs for dependencies, pinned actions and the base image. Security
+# updates also arrive as soon as an advisory is published (enable "Dependabot
+# security updates" in the repo settings).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Let new releases age a week before proposing them: most malicious package
+    # versions are caught and pulled within days.
+    cooldown:
+      default-days: 7
+    groups:
+      dev-tools:
+        dependency-type: development
+      runtime:
+        dependency-type: production
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

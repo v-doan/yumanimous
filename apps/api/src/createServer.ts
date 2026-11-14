@@ -24,6 +24,7 @@ import { mcpRecipeDetails } from './followUps/recipeDetails.js';
 import { PostgresSessionStore } from './sessions/postgresSessionStore.js';
 import { InMemorySessionStore, type SessionStore } from './sessions/sessionStore.js';
 import { SessionService } from './sessions/sessionService.js';
+import type { Limits } from './security/limits.js';
 
 export interface ServerOptions {
   port: number;
@@ -36,9 +37,29 @@ export interface ServerOptions {
    * AI deck building (Phase 6). Needs Postgres (for the read-only session tools and
    * the cost log) and ANTHROPIC_API_KEY in the environment. Off when omitted.
    */
-  ai?: { model: string; monthlyBudgetUsd: number; trace?: boolean } | undefined;
+  ai?:
+    | { model: string; monthlyBudgetUsd: number; dailyBudgetUsd?: number; trace?: boolean }
+    | undefined;
   /** Exposes GET /api/debug/ai (AI cost and latency). Development only. */
   debugRoutes?: boolean;
+  /**
+   * Production: a connection as a SELECT-only role for the agents' session tools
+   * (mcp-session). Without it, a read-only session on `databaseUrl` is used (dev).
+   */
+  readerDatabaseUrl?: string | undefined;
+  /**
+   * Run migrations at startup (dev, tests). In production they run once per deploy
+   * as the schema owner, and the app's own role can't change the schema.
+   */
+  runMigrations?: boolean;
+  /** Abuse and cost limits (production). */
+  limits?: Limits | undefined;
+  /** Proxies in front of the API that add to X-Forwarded-For (Fly: 1). */
+  trustedProxies?: number;
+  /** Production: serve the built web app from this directory, same origin. */
+  staticDir?: string | undefined;
+  /** Production: the site's public https origin (CSP, socket origin check). */
+  publicOrigin?: string | undefined;
   /** How long a member may be offline (refresh, tunnel, locked phone) before removal. */
   graceMs?: number;
   /** How often to look for members past the grace period. */
@@ -62,13 +83,19 @@ export async function createServer({
   webOrigin,
   ai,
   debugRoutes = false,
+  readerDatabaseUrl,
+  runMigrations = true,
+  limits,
+  trustedProxies = 0,
+  staticDir,
+  publicOrigin,
   graceMs = 2 * MINUTE,
   presenceSweepMs = 30 * SECOND,
   now,
   ...overrides
 }: ServerOptions) {
   const pool = databaseUrl ? createPool(databaseUrl) : null;
-  if (pool) await migrate(pool);
+  if (pool && runMigrations) await migrate(pool);
 
   const store =
     overrides.store ?? (pool ? new PostgresSessionStore(pool) : new InMemorySessionStore());
@@ -94,10 +121,12 @@ export async function createServer({
     // Guest names can appear in tool inputs; the trace is for local debugging only.
     const trace = ai.trace ? { trace: (line: string) => console.log(`[ai] ${line}`) } : {};
     aiLog = new PostgresAiCallLog(pool);
-    budget = new BudgetGuard(aiLog, ai.monthlyBudgetUsd);
+    budget = new BudgetGuard(aiLog, ai.monthlyBudgetUsd, Date.now, ai.dailyBudgetUsd ?? null);
     // The agents read sessions through mcp-session on a connection Postgres keeps
     // read-only, exactly as Claude Desktop / Claude Code do.
-    const sessionPool = createPool(databaseUrl, { readOnly: true });
+    // Production uses a SELECT-only role (no access to rejoin token hashes at all);
+    // the read-only session setting stays on as well.
+    const sessionPool = createPool(readerDatabaseUrl ?? databaseUrl, { readOnly: true });
     readOnlyPool = sessionPool;
     followUpAi = {
       agent: new ClaudeFollowUpAgent({
@@ -134,7 +163,13 @@ export async function createServer({
       ai: followUpAi,
     });
 
-  const service = new SessionService({ store, deckSource, followUps, ...(now ? { now } : {}) });
+  const service = new SessionService({
+    store,
+    deckSource,
+    followUps,
+    caps: { maxActiveSessions: limits?.maxActiveSessions ?? null },
+    ...(now ? { now } : {}),
+  });
   // After a restart nobody has a socket yet. Phones reconnect within seconds and
   // flip back online; the presence sweep removes anyone who doesn't come back.
   await service.markAllOffline();
@@ -142,9 +177,18 @@ export async function createServer({
   const app = createApp(service, {
     webOrigin,
     debug: debugRoutes && aiLog && budget ? { aiLog, budget } : undefined,
+    limits,
+    trustedProxies,
+    staticDir,
+    publicOrigin,
   });
   const httpServer = createHttpServer(app);
-  const realtime = attachRealtime(httpServer, service, { webOrigin });
+  const realtime = attachRealtime(httpServer, service, {
+    webOrigin,
+    limits,
+    trustedProxies,
+    allowedOrigins: publicOrigin ? [publicOrigin, ...(webOrigin ? [webOrigin] : [])] : undefined,
+  });
 
   const timers = [
     setInterval(

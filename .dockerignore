@@ -1,0 +1,25 @@
+# Never send secrets, local state or build output into the image.
+.env
+.env.*
+**/.env
+**/.env.*
+.git
+.github
+.claude
+.mcp.json
+**/node_modules
+**/dist
+coverage
+**/*.log
+**/*.tsbuildinfo
+
+# Tests and their fixtures aren't needed at runtime.
+**/*.test.ts
+**/*.test.tsx
+**/__fixtures__
+**/testing
+apps/api/scripts
+scripts
+docker-compose.yml
+Dockerfile
+fly.toml
