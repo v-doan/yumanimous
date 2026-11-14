@@ -133,6 +133,35 @@ describe.skipIf(!databaseUrl)('least-privilege database roles', () => {
     });
   });
 
+  it('running setup again rotates the passwords and keeps the roles unprivileged', async () => {
+    const rotated = { app: 'app-pw-rotated', reader: 'reader-pw-rotated' };
+    await ensureRoles(db.pool, rotated, roles);
+    const fresh = createPool(connectionStringFor(db.url, roles.app, rotated.app));
+    try {
+      const { rows } = await fresh.query('SELECT count(*)::int AS n FROM sessions');
+      expect(rows[0].n).toBe(1);
+    } finally {
+      await fresh.end();
+    }
+    // The old password no longer works.
+    const stale = createPool(connectionStringFor(db.url, roles.app, 'app-pw-test'));
+    await expect(stale.query('SELECT 1')).rejects.toThrow(/password authentication failed/);
+    await stale.end();
+    // Restore, so the shared pools above keep working for the remaining tests.
+    await ensureRoles(db.pool, passwords, roles);
+  });
+
+  it('refuses to hand out a role that has elevated rights', async () => {
+    const admin = createPool(databaseUrl);
+    try {
+      await admin.query(`ALTER ROLE ${roles.reader} CREATEDB`);
+      await expect(ensureRoles(db.pool, passwords, roles)).rejects.toThrow(/rolcreatedb/);
+    } finally {
+      await admin.query(`ALTER ROLE ${roles.reader} NOCREATEDB`);
+      await admin.end();
+    }
+  });
+
   it('grants are idempotent (they run on every deploy)', async () => {
     await applyGrants(db.pool, roles);
     await applyGrants(db.pool, roles);

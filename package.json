@@ -17,7 +17,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present && tsc -p scripts",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "db:roles": "npm run -s db:roles -w @yumanimous/db"
+    "db:roles": "npm run -s db:roles -w @yumanimous/db",
+    "setup:prod": "tsx scripts/setupProduction.ts"
   },
   "engines": {
     "node": ">=22.22.2"

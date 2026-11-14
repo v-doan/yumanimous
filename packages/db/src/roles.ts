@@ -54,12 +54,49 @@ export async function ensureRoles(
     [roles.reader, passwords.reader],
   ] as const) {
     const { rows } = await db.query('SELECT 1 FROM pg_roles WHERE rolname = $1', [role]);
-    const verb = rows.length ? 'ALTER' : 'CREATE';
     // Role names are checked above; the password is quoted as a literal (DDL can't
     // take bind parameters).
-    await db.query(
-      `${verb} ROLE ${role} WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT ` +
-        `NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 20 PASSWORD ${pg.escapeLiteral(password)}`,
+    const secret = pg.escapeLiteral(password);
+    if (rows.length === 0) {
+      await db.query(
+        `CREATE ROLE ${role} WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT ` +
+          `NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 20 PASSWORD ${secret}`,
+      );
+    } else {
+      // Rotating: only the password. On managed Postgres (Neon) the owner isn't a
+      // superuser and may not even restate NOSUPERUSER; the check below covers it.
+      await db.query(`ALTER ROLE ${role} WITH LOGIN PASSWORD ${secret}`);
+    }
+    await assertUnprivileged(db, role);
+  }
+}
+
+/** Refuses to continue if a role could do more than log in (checked, not assumed). */
+async function assertUnprivileged(db: pg.Pool | pg.Client, role: string) {
+  const { rows } = await db.query<Record<string, boolean>>(
+    `SELECT rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls, rolinherit
+       FROM pg_roles WHERE rolname = $1`,
+    [role],
+  );
+  const flags = rows[0];
+  const elevated = flags ? Object.entries(flags).filter(([, on]) => on) : [['missing', true]];
+  if (elevated.length) {
+    throw new Error(
+      `Role ${role} has rights it must not have: ${elevated.map(([name]) => name).join(', ')}. ` +
+        'Drop it (DROP ROLE) and run this again.',
+    );
+  }
+  // Membership in another role (e.g. Neon's neon_superuser) would grant its rights.
+  const member = await db.query(
+    `SELECT b.rolname FROM pg_auth_members m
+       JOIN pg_roles r ON r.oid = m.member JOIN pg_roles b ON b.oid = m.roleid
+      WHERE r.rolname = $1`,
+    [role],
+  );
+  if (member.rows.length) {
+    throw new Error(
+      `Role ${role} is a member of ${member.rows.map((r) => r.rolname).join(', ')}; ` +
+        'it must not inherit anyone’s rights. Drop it and run this again.',
     );
   }
 }
