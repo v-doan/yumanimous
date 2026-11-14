@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import type { Membership } from '@yumanimous/shared';
-import { sessionView } from '../test/fixtures';
+import { member, sessionView } from '../test/fixtures';
 import { SessionRoom } from './SessionRoom';
 import { useSession } from './useSession';
 
@@ -32,6 +32,7 @@ function mockSession(overrides: Partial<ReturnType<typeof useSession>> = {}) {
     toggleLine: async () => {},
     setServings: async () => {},
     acceptSuggestion: async () => {},
+    playAgain: async () => {},
     leave,
     dismissMatch: () => {},
     clearError: () => {},
@@ -138,5 +139,64 @@ describe('Shopping list', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Results' }));
     await userEvent.click(screen.getByRole('button', { name: 'View shopping list' }));
     expect(screen.getByRole('status')).toHaveTextContent('Making the list…');
+  });
+});
+
+describe('Play again (Phase 8)', () => {
+  const decided = {
+    swipes: [
+      { cardId: 'soup', memberId: 'vy', direction: 'like' as const },
+      { cardId: 'soup', memberId: 'sam', direction: 'like' as const },
+    ],
+    matches: [{ cardId: 'soup', matchedAt: 1 }],
+    canPlayAgain: true,
+  };
+
+  it('lets the host start another round after confirming', async () => {
+    const playAgain = vi.fn(async () => {});
+    mockSession({
+      view: sessionView({ ...decided, members: [member('vy', { isHost: true }), member('sam')] }),
+      playAgain,
+    });
+    renderRoom();
+    await userEvent.click(screen.getByRole('button', { name: 'Results' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Play again' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Play another round?' });
+    expect(playAgain).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Play again' }));
+    expect(playAgain).toHaveBeenCalledOnce();
+  });
+
+  it('tells guests the host can start another round', async () => {
+    mockSession({
+      view: sessionView({ ...decided, members: [member('vy'), member('sam', { isHost: true })] }),
+    });
+    renderRoom();
+    await userEvent.click(screen.getByRole('button', { name: 'Results' }));
+    expect(screen.queryByRole('button', { name: 'Play again' })).not.toBeInTheDocument();
+    expect(
+      screen.getByText('The host can start another round with a fresh deck.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the round from round 2', () => {
+    mockSession({ view: sessionView({ round: 2 }) });
+    renderRoom();
+    expect(screen.getByText(/Round 2/)).toBeInTheDocument();
+  });
+
+  it('a new round goes back to the deck from the results', async () => {
+    mockSession({ view: sessionView({ ...decided }) });
+    const { rerender } = renderRoom();
+    await userEvent.click(screen.getByRole('button', { name: 'Results' }));
+    expect(screen.getByRole('heading', { name: 'Live results' })).toBeInTheDocument();
+
+    mockSession({ view: sessionView({ round: 2 }) });
+    rerender(
+      <MemoryRouter>
+        <SessionRoom membership={membership} onLostIdentity={() => {}} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole('heading', { name: 'Live results' })).not.toBeInTheDocument();
   });
 });

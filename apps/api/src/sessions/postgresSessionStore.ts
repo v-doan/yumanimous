@@ -3,6 +3,7 @@ import {
   CardSchema,
   HardFiltersSchema,
   MemberPreferencesSchema,
+  PastRoundSchema,
   ShoppingListSchema,
   SuggestionSchema,
   type Card,
@@ -127,6 +128,8 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
     reranked_at: Date | null;
     suggestion: unknown;
     mediated_at: Date | null;
+    round: number;
+    past_rounds: unknown;
     updated_at: Date;
   }>(`SELECT * FROM sessions WHERE code = $1 ${forUpdate ? 'FOR UPDATE' : ''}`, [code]);
   const row = session.rows[0];
@@ -202,6 +205,8 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
     shoppingLists: lists.rows.map((r) => ShoppingListSchema.parse(r.list)),
     suggestion: row.suggestion === null ? null : SuggestionSchema.parse(row.suggestion),
     mediatedAt: toMs(row.mediated_at),
+    round: row.round,
+    pastRounds: PastRoundSchema.array().parse(row.past_rounds),
     updatedAt: row.updated_at.getTime(),
   };
   return stored;
@@ -257,7 +262,8 @@ const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringif
 async function persistDiff(db: pg.PoolClient, before: StoredSession, after: StoredSession) {
   await db.query(
     `UPDATE sessions SET status = $2, host_id = $3, match_rule = $4, deck_filters = $5,
-       reranked_at = $6, updated_at = $7, suggestion = $8, mediated_at = $9 WHERE code = $1`,
+       reranked_at = $6, updated_at = $7, suggestion = $8, mediated_at = $9, round = $10,
+       past_rounds = $11 WHERE code = $1`,
     [
       after.code,
       after.status,
@@ -268,6 +274,9 @@ async function persistDiff(db: pg.PoolClient, before: StoredSession, after: Stor
       toDate(after.updatedAt),
       after.suggestion,
       after.mediatedAt === null ? null : toDate(after.mediatedAt),
+      after.round,
+      // pg would send a JS array as a Postgres array; jsonb needs it as JSON text.
+      JSON.stringify(after.pastRounds),
     ],
   );
 

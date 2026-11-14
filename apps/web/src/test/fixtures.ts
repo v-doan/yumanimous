@@ -32,5 +32,7 @@ export const sessionView = (overrides: Partial<SessionView> = {}): SessionView =
   shoppingLists: [],
   suggestion: null,
   mediating: false,
+  round: 1,
+  canPlayAgain: false,
   ...overrides,
 });

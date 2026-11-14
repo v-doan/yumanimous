@@ -5,7 +5,7 @@ import {
   type GroupPreferences,
   type MemberPreferences,
 } from '@yumanimous/shared';
-import { DeckError, type DeckSource } from '../deck/deckSource.js';
+import { DeckError, type DeckBuildContext, type DeckSource } from '../deck/deckSource.js';
 import { FollowUpError, type FollowUps } from '../followUps/followUps.js';
 import { buildLines } from '../followUps/shoppingList.js';
 import { SessionService, type SessionEvent } from './sessionService.js';
@@ -21,11 +21,16 @@ const deck: Card[] = ['soup', 'salad', 'stew'].map((id) => ({
 }));
 /** Records the merged rules each deck was asked to satisfy. */
 let deckRequests: (GroupPreferences | undefined)[] = [];
+let deckContexts: (DeckBuildContext | undefined)[] = [];
 let nextDeck: Card[] | Error = deck;
+/** When set, builds wait for it: lets a test tap twice while one is running. */
+let deckGate: Promise<void> | null = null;
 const deckSource: DeckSource = {
   mode: 'cook-in',
-  buildDeck: async (group) => {
+  buildDeck: async (group, context) => {
     deckRequests.push(group);
+    deckContexts.push(context);
+    if (deckGate) await deckGate;
     if (nextDeck instanceof Error) throw nextDeck;
     return nextDeck;
   },
@@ -87,6 +92,8 @@ describe.each(['memory', 'postgres'] as const)('SessionService with %s store', (
     beforeEach(async () => {
       clock = 1_000;
       deckRequests = [];
+      deckContexts = [];
+      deckGate = null;
       nextDeck = deck;
       if (db) await db.reset();
       store = db ? new PostgresSessionStore(db.pool) : new InMemorySessionStore();
@@ -837,6 +844,128 @@ describe.each(['memory', 'postgres'] as const)('SessionService with %s store', (
         await expect(svc.acceptSuggestion(code, ids[0]!)).rejects.toMatchObject({
           code: 'not_allowed',
         });
+      });
+    });
+
+    describe('play again (Phase 8)', () => {
+      const thai = { id: 'thai', title: 'Pad Thai', tags: ['30 min', 'Thai'], blurb: 'Yum.' };
+      const pasta = { id: 'pasta', title: 'Pasta', tags: ['Italian'], blurb: 'Yum.' };
+      const risotto = { id: 'risotto', title: 'Risotto', tags: ['Italian'], blurb: 'Yum.' };
+      const round2: Card[] = ['tacos', 'curry'].map((id) => ({
+        id,
+        title: id,
+        tags: [],
+        blurb: 'Yum.',
+      }));
+
+      /** Round 1: Pad Thai matches; Sam skips both Italian dishes. */
+      async function decidedRound() {
+        nextDeck = [thai, pasta, risotto];
+        const s = await startedSession(['Sam']);
+        const [host, sam] = s.ids as [string, string];
+        await service.swipe(s.code, host, { cardId: 'thai', direction: 'like' });
+        await service.swipe(s.code, sam, { cardId: 'thai', direction: 'like' });
+        await service.swipe(s.code, sam, { cardId: 'pasta', direction: 'skip' });
+        await service.swipe(s.code, sam, { cardId: 'risotto', direction: 'skip' });
+        nextDeck = round2;
+        return { ...s, host, sam };
+      }
+
+      it('only the host, and only once the round has a pick or everyone finished', async () => {
+        const { code, ids } = await startedSession(['Sam']);
+        await expect(service.playAgain(code, ids[1]!)).rejects.toMatchObject({ code: 'not_host' });
+        await expect(service.playAgain(code, ids[0]!)).rejects.toMatchObject({
+          code: 'not_allowed',
+        });
+        expect((await service.view(code)).canPlayAgain).toBe(false);
+
+        // Everyone finishing counts, even with no match.
+        for (const id of ids) {
+          for (const card of deck)
+            await service.swipe(code, id, { cardId: card.id, direction: 'skip' });
+        }
+        expect((await service.view(code)).canPlayAgain).toBe(true);
+      });
+
+      it('archives the round, starts the next one with a fresh deck, and keeps people', async () => {
+        const { code, host, sam } = await decidedRound();
+        expect((await service.view(code)).canPlayAgain).toBe(true);
+        await service.playAgain(code, host);
+
+        const view = await service.view(code);
+        expect(view).toMatchObject({
+          round: 2,
+          status: 'swiping',
+          swipes: [],
+          matches: [],
+          shoppingLists: [],
+          suggestion: null,
+          canPlayAgain: false,
+        });
+        expect(view.deck.map((c) => c.id)).toEqual(['tacos', 'curry']);
+        expect(view.members.map((m) => m.id)).toEqual([host, sam]);
+
+        const stored = await store.get(code);
+        expect(stored!.rerankedAt).toBeNull(); // The re-rank can run again.
+        expect(stored!.mediatedAt).toBeNull(); // So can the mediator.
+        expect(stored!.pastRounds).toEqual([
+          {
+            round: 1,
+            cards: [thai, pasta, risotto].map(({ id, title, tags }) => ({ id, title, tags })),
+            swipes: expect.arrayContaining([{ memberId: sam, cardId: 'pasta', direction: 'skip' }]),
+            decision: { cardId: 'thai', title: 'Pad Thai', how: 'match' },
+          },
+        ]);
+      });
+
+      it('builds the next deck away from shown cards, nudged by how people swiped', async () => {
+        const { code, host } = await decidedRound();
+        await service.playAgain(code, host);
+
+        const context = deckContexts.at(-1)!;
+        expect(context.excludeCardIds).toEqual(['thai', 'pasta', 'risotto']);
+        expect(context.round).toBe(2);
+        // Both said yum to Thai (+0.5 each); Sam never yum'd Italian (-0.5).
+        expect(deckRequests.at(-1)!.soft.cuisineScores).toEqual({ Thai: 1, Italian: -0.5 });
+        // Swipes never become hard rules.
+        expect(deckRequests.at(-1)!.hard).toEqual(deckRequests[0]!.hard);
+      });
+
+      it('a double tap builds one deck', async () => {
+        const { code, host } = await decidedRound();
+        const before = deckRequests.length;
+        let open!: () => void;
+        deckGate = new Promise((resolve) => (open = resolve));
+        const taps = [service.playAgain(code, host), service.playAgain(code, host)];
+        await vi.waitFor(() => expect(deckRequests.length).toBe(before + 1));
+        open();
+        await Promise.all(taps);
+        expect(deckRequests.length).toBe(before + 1);
+        expect((await service.view(code)).round).toBe(2);
+      });
+
+      it('someone who leaves takes their votes from earlier rounds with them', async () => {
+        const { code, host, sam } = await decidedRound();
+        await service.playAgain(code, host);
+        await service.removeMember(code, sam);
+        const stored = await store.get(code);
+        expect(stored!.pastRounds[0]!.swipes.every((s) => s.memberId !== sam)).toBe(true);
+        expect(stored!.pastRounds[0]!.swipes.length).toBeGreaterThan(0);
+      });
+
+      it('keeps at most 5 earlier rounds', async () => {
+        const { code, host, sam } = await decidedRound();
+        for (let r = 0; r < 6; r++) {
+          await service.playAgain(code, host);
+          nextDeck = [{ id: `r${r}`, title: `R${r}`, tags: [], blurb: 'Yum.' }];
+          const { deck: current } = await service.view(code);
+          for (const id of [host, sam]) {
+            await service.swipe(code, id, { cardId: current[0]!.id, direction: 'like' });
+          }
+        }
+        const stored = await store.get(code);
+        expect(stored!.round).toBe(7);
+        expect(stored!.pastRounds.map((r) => r.round)).toEqual([2, 3, 4, 5, 6]);
       });
     });
 

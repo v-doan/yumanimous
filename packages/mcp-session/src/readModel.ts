@@ -3,10 +3,12 @@ import {
   CardSchema,
   HardFiltersSchema,
   MemberPreferencesSchema,
+  PastRoundSchema,
   type Card,
   type HardFilters,
   type MemberPreferences,
   type MatchRuleId,
+  type PastRound,
   type SessionStatus,
   type Swipe,
 } from '@yumanimous/shared';
@@ -34,6 +36,9 @@ export interface SessionSnapshot {
   }[];
   swipes: Swipe[];
   matches: { cardId: string; matchedAt: string }[];
+  /** Phase 8: the current round, and earlier rounds of this session. */
+  round: number;
+  pastRounds: PastRound[];
 }
 
 export async function loadSnapshot(
@@ -64,9 +69,13 @@ async function readSnapshot(db: pg.PoolClient, code: string): Promise<SessionSna
     status: SessionStatus;
     host_id: string;
     deck_filters: unknown;
-  }>('SELECT code, mode, match_rule, status, host_id, deck_filters FROM sessions WHERE code = $1', [
-    code,
-  ]);
+    round: number;
+    past_rounds: unknown;
+  }>(
+    `SELECT code, mode, match_rule, status, host_id, deck_filters, round, past_rounds
+     FROM sessions WHERE code = $1`,
+    [code],
+  );
   const row = session.rows[0];
   if (!row) return undefined;
 
@@ -109,6 +118,8 @@ async function readSnapshot(db: pg.PoolClient, code: string): Promise<SessionSna
     hostId: row.host_id,
     deck: deck.rows.map((r) => CardSchema.parse(r.card)),
     deckFilters: row.deck_filters === null ? null : HardFiltersSchema.parse(row.deck_filters),
+    round: row.round,
+    pastRounds: PastRoundSchema.array().parse(row.past_rounds),
     // jsonb is re-validated on read, like everything else that reaches a model.
     members: members.rows.map((m) => ({
       id: m.id,

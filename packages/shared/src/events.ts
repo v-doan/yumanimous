@@ -47,6 +47,11 @@ export interface ClientToServerEvents {
   'shopping:servings': (input: SetShoppingServings, ack: Ack) => void;
   /** Anyone: "Go with it" on the mediator's suggestion. */
   'suggestion:accept': (ack: Ack) => void;
+  /**
+   * Host only, once the round is decided or everyone finished: archive this round
+   * and build a fresh deck that learns from it. Same people, rules and link.
+   */
+  'session:replay': (ack: Ack) => void;
 }
 
 export interface ServerToClientEvents {

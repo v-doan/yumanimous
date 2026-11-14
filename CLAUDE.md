@@ -18,7 +18,7 @@ clarity, and a clean README matter more than feature count.
 
 ## What makes it different
 - Zero-install web join by link (the #1 reason similar apps die is that everyone must install them)
-- Group memory: saved groups remember past sessions, vetoes and recent picks, and the AI uses them
+- Round memory: "Play again" keeps the people and their rules, and the AI learns from earlier rounds
 - Solves what happens after the decision: shopping list (cook in) or a shareable summary card (eat out)
 
 ## Sessions and groups
@@ -32,11 +32,15 @@ clarity, and a clean README matter more than feature count.
 - Live results screen: vote counts per card, leaderboard, and who is still swiping
 - Edge cases to handle: member leaves mid-session, member joins late, host disconnects, page refresh mid-session (rejoin with same identity via local token)
 
-## Group memory
-- Host can save a session's members as a named group ("Friday crew")
-- Past sessions store: mode, winning card, vetoed/never-liked categories per member
-- `mcp-session` exposes read-only group history so the curator can avoid repeats and respect past dislikes
-- Members can be removed from a saved group; their history is deleted with them
+## Round memory
+- Link sessions are one-time by design: no saved groups and no accounts (decided against: without
+  accounts a saved group is a fragile half-account, and it adds friction to the zero-install flow)
+- "Play again" (host, once a round has a pick or everyone finished): same people, rules and link;
+  the round is archived (cards, votes, decision) and a fresh deck is built
+- The next deck avoids cards already shown and learns from each member's yums and never-likes
+  (cuisines only; swipes never become hard rules)
+- `mcp-session` exposes the round history read-only so the curator can use it
+- Everything is deleted with the session; a member who leaves takes their past votes with them
 
 ## Stack
 - Monorepo (npm workspaces), TypeScript everywhere
@@ -89,6 +93,6 @@ clarity, and a clean README matter more than feature count.
 5. Preference intake (natural language -> Zod-validated filters), merged across members
 6. Orchestrator + subagents build the deck; re-rank after swipes
 7. Match follow-ups (sous-chef shopping list, eat-out summary card) + no-match mediator
-8. Group memory: saved groups, history in `mcp-session`, curator uses it
+8. Round memory: "Play again", round history in `mcp-session`, curator uses it
 9. Deploy + PWA manifest, README with architecture diagram, demo video (several phones voting), eval set
 10. If time: eat-out mode (`mcp-places`), 2-minute round timer

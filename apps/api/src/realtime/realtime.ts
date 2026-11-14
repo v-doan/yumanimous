@@ -124,6 +124,10 @@ export function attachRealtime(
       'suggestion:accept',
       handle(() => service.acceptSuggestion(code, memberId)),
     );
+    socket.on(
+      'session:replay',
+      handle(() => service.playAgain(code, memberId)),
+    );
 
     socket.on('disconnect', () => {
       const remaining = (presence.get(key(code, memberId)) ?? 1) - 1;

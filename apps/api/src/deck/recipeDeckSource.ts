@@ -10,7 +10,13 @@ import {
 } from '@yumanimous/shared';
 import type { ApiCache, CardCatalog } from '@yumanimous/db';
 import { toCard, type SpoonacularClient } from '@yumanimous/mcp-recipes';
-import { DeckError, type DeckSource } from './deckSource.js';
+import {
+  DeckError,
+  preferUnseen,
+  seenLast,
+  type DeckBuildContext,
+  type DeckSource,
+} from './deckSource.js';
 
 const DAY = 24 * 60 * 60_000;
 /** Below this many recipes a deck isn't worth swiping; tell the host instead. */
@@ -69,8 +75,11 @@ export class RecipeDeckSource implements DeckSource {
     };
   }
 
-  async buildDeck(group?: GroupPreferences): Promise<Card[]> {
-    return this.deal(await this.candidatePool(group), group);
+  async buildDeck(group?: GroupPreferences, context?: DeckBuildContext): Promise<Card[]> {
+    // Play again: cards from earlier rounds stay out while enough fresh ones exist.
+    const seen = new Set(context?.excludeCardIds ?? []);
+    const pool = preferUnseen(await this.candidatePool(group), seen);
+    return seenLast(this.deal(pool, group), seen);
   }
 
   /**

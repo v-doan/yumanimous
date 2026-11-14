@@ -16,6 +16,8 @@ export interface DeckRequest {
   pool: Card[];
   searchMore: ((extra: ScoutQuery) => Promise<Card[]>) | null;
   onProgress?: (stage: ProgressStage) => void;
+  /** Phase 8: which round of the session (from 2, earlier rounds are history). */
+  round?: number;
   /** The curator's order, the moment it's handed in (see createDeckTools). */
   onOrder?: (chosen: Card[], candidates: Map<string, Card>) => void;
   signal: AbortSignal;
@@ -94,6 +96,7 @@ export class ClaudeDeckAgent implements DeckAgent {
     });
     const code = req.sessionCode;
     const n = req.deckSize;
+    const round = req.round ?? 1;
 
     // Wall-clock per stage: when each subagent is called, and when its answer returns.
     const t0 = Date.now();
@@ -103,7 +106,7 @@ export class ClaudeDeckAgent implements DeckAgent {
     const run = await runQuery({
       trace: this.opts.trace,
       prompt:
-        `Build a swipe deck of exactly ${n} dinner recipes for session ${code}: ` +
+        `Build a swipe deck of exactly ${n} dinner recipes for session ${code} (round ${round}): ` +
         'scout, then curator, then writer.',
       // No structured output: the curator and writer hand in their work through
       // tools, and the code assembles the deck from that (see deckTools).
@@ -132,7 +135,7 @@ export class ClaudeDeckAgent implements DeckAgent {
           'You run a small team that builds a recipe deck for a group deciding what to cook together. ' +
           'Call the Agent tool three times, one after another, waiting for each: scout, then curator, then writer. ' +
           'Always pass run_in_background: false, since each step needs the previous one. ' +
-          'Tell each one the session code and the deck size. They save their work through tools, so you never ' +
+          'Tell each one the session code, the deck size and the round number. They save their work through tools, so you never ' +
           'repeat cards or blurbs. When the writer has finished, reply with just "done". ' +
           DATA_NOTE,
         tools: ['Agent'],
@@ -143,6 +146,7 @@ export class ClaudeDeckAgent implements DeckAgent {
               'Call list_candidates to see the pool, and get_member_preferences for the session to see what the group likes. ' +
               `If the pool has fewer than ${n + 5} recipes, or little that matches the group’s liked cuisines or cravings, ` +
               'call search_candidates (at most twice) with a cuisine or a short query that fits their tastes. ' +
+              'If the round is 2 or more, call get_round_history first and let what each member said yum to before guide the searches. ' +
               'Hard food rules are applied for you; never try to work around them. ' +
               'Then reply with one short sentence, nothing else. ' +
               DATA_NOTE,
@@ -150,6 +154,7 @@ export class ClaudeDeckAgent implements DeckAgent {
               'mcp__deck__list_candidates',
               'mcp__deck__search_candidates',
               'mcp__session__get_member_preferences',
+              'mcp__session__get_round_history',
             ],
             model: this.model,
             // Run inline: a background subagent ends the orchestrator's turn and
@@ -162,6 +167,8 @@ export class ClaudeDeckAgent implements DeckAgent {
               'Call get_member_preferences and get_session for the session, then list_candidates. ' +
               `Choose exactly ${n} distinct cardIds (fewer only if there are fewer candidates) that the whole group will enjoy: ` +
               'favour liked cuisines and cravings, avoid disliked cuisines and ingredients, and mix cuisines and cooking times. ' +
+              'If the round is 2 or more, also call get_round_history: lean towards cuisines members said yum to in earlier rounds, ' +
+              'away from their "never" cuisines, and pick something different from earlier picks. ' +
               'Put the strongest crowd-pleasers first. Call submit_order once with them, best first. ' +
               'Then reply with one short sentence, nothing else. ' +
               DATA_NOTE,
@@ -170,6 +177,7 @@ export class ClaudeDeckAgent implements DeckAgent {
               'mcp__deck__submit_order',
               'mcp__session__get_member_preferences',
               'mcp__session__get_session',
+              'mcp__session__get_round_history',
             ],
             model: this.model,
             background: false,
@@ -195,6 +203,7 @@ export class ClaudeDeckAgent implements DeckAgent {
           'mcp__deck__submit_blurbs',
           'mcp__session__get_member_preferences',
           'mcp__session__get_session',
+          'mcp__session__get_round_history',
         ],
       },
     });

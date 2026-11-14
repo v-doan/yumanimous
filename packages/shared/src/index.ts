@@ -6,5 +6,6 @@ export * from './matchRules.js';
 export * from './member.js';
 export * from './preferenceParser.js';
 export * from './preferences.js';
+export * from './rounds.js';
 export * from './session.js';
 export * from './swipe.js';

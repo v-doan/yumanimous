@@ -69,6 +69,10 @@ export const SessionViewSchema = z.object({
   suggestion: SuggestionSchema.nullable(),
   /** True while the mediator is working on a suggestion. */
   mediating: z.boolean(),
+  /** Phase 8: which round this is (1 until the host taps "Play again"). */
+  round: z.number().int().positive(),
+  /** The round is decided (a match or an accepted compromise) or everyone finished. */
+  canPlayAgain: z.boolean(),
 });
 
 export type SessionView = z.infer<typeof SessionViewSchema>;

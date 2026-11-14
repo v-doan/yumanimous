@@ -17,6 +17,8 @@ const env = z
     AI_MONTHLY_BUDGET_USD: z.coerce.number().positive().default(8),
     // Development only: GET /api/debug/ai (AI cost and latency).
     DEBUG_ROUTES: z.enum(['true', 'false']).default('false'),
+    // Development only: one console line per agent message (which tools ran, when).
+    AI_TRACE: z.enum(['true', 'false']).default('false'),
   })
   .parse(process.env);
 
@@ -26,7 +28,11 @@ const server = await createServer({
   spoonacularApiKey: env.SPOONACULAR_API_KEY || undefined,
   webOrigin: env.WEB_ORIGIN,
   ai: env.ANTHROPIC_API_KEY
-    ? { model: env.AI_MODEL, monthlyBudgetUsd: env.AI_MONTHLY_BUDGET_USD }
+    ? {
+        model: env.AI_MODEL,
+        monthlyBudgetUsd: env.AI_MONTHLY_BUDGET_USD,
+        trace: env.AI_TRACE === 'true',
+      }
     : undefined,
   debugRoutes: env.DEBUG_ROUTES === 'true',
 }).catch((err: NodeJS.ErrnoException & { errors?: NodeJS.ErrnoException[] }) => {

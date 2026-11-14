@@ -337,6 +337,25 @@ describe('after the decision (Phase 7)', () => {
     expect((await guestSeesServings).shoppingLists[0]!.lines[0]!.quantity).toBe('6 cloves');
   });
 
+  it('plays again: the host starts round 2 for everyone, guests can’t', async () => {
+    const { host, guest } = await twoPeople();
+    expect(await host.emitWithAck('session:replay')).toEqual({
+      ok: false,
+      error: 'Another round can start once this one has a pick or everyone has finished',
+    });
+    await swipe(host, 'spoonacular:1', 'like');
+    await swipe(guest, 'spoonacular:1', 'like');
+
+    expect(await guest.emitWithAck('session:replay')).toEqual({
+      ok: false,
+      error: 'Only the host can start another round',
+    });
+    const guestSeesRound2 = waitForState(guest, (v) => v.round === 2);
+    expect(await host.emitWithAck('session:replay')).toEqual({ ok: true });
+    const view = await guestSeesRound2;
+    expect(view).toMatchObject({ matches: [], swipes: [], canPlayAgain: false });
+  });
+
   it('suggests a compromise when nothing matched, and anyone can accept it', async () => {
     const { host, guest } = await twoPeople();
     const guestSeesSuggestion = waitForState(guest, (v) => v.suggestion !== null);

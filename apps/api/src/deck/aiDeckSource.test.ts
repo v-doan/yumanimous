@@ -300,3 +300,32 @@ describe('completeOrder', () => {
     expect(completeOrder(['nope'], pool)).toBeNull();
   });
 });
+
+describe('AiDeckSource: play again (Phase 8)', () => {
+  it('keeps earlier rounds’ cards out of the agent’s pool and the scout’s searches', async () => {
+    base.searchMore.mockResolvedValueOnce([card('a'), card('y')]);
+    agent.deckResult = async (req) => {
+      const found = await req.searchMore!({ cuisine: 'Thai' });
+      expect(found.map((c) => c.id)).toEqual(['y']); // 'a' was shown last round.
+      return req.pool.map((c) => ({ cardId: c.id, blurb: '' }));
+    };
+    const deck = await source().buildDeck(undefined, {
+      ...ctx,
+      excludeCardIds: ['a'],
+      round: 2,
+    });
+    expect(agent.deckRequests[0]!.pool.map((c) => c.id)).toEqual(['b', 'c', 'd', 'e', 'f']);
+    expect(agent.deckRequests[0]!.round).toBe(2);
+    expect(deck.map((c) => c.id)).not.toContain('a');
+  });
+
+  it('allows repeats only when too few fresh cards are left, and deals them last', async () => {
+    agent.deckResult = async (req) => req.pool.map((c) => ({ cardId: c.id, blurb: '' }));
+    const deck = await source().buildDeck(undefined, {
+      ...ctx,
+      excludeCardIds: ['a', 'b', 'c'], // Only 3 fresh: fewer than a round needs.
+    });
+    expect(agent.deckRequests[0]!.pool).toHaveLength(6);
+    expect(deck.map((c) => c.id)).toEqual(['d', 'a', 'b', 'c']);
+  });
+});

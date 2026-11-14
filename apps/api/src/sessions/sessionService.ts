@@ -1,6 +1,9 @@
 import {
   MAX_MEMBERS,
+  MAX_PAST_ROUNDS,
   canMakeShoppingList,
+  summarizeRounds,
+  withHistory,
   matchRules,
   evaluateCard,
   mergePreferences,
@@ -12,6 +15,7 @@ import {
   type MatchRuleId,
   type MemberPreferences,
   type Membership,
+  type PastRound,
   type SessionPreview,
   type SessionView,
   type ShoppingList,
@@ -66,7 +70,13 @@ export type SessionEvent =
 
 type Listener = (event: SessionEvent) => void;
 
-type DeckJobKind = 'start' | 'rebuild';
+type DeckJobKind = 'start' | 'rebuild' | 'replay';
+
+const HOST_ONLY: Record<DeckJobKind, string> = {
+  start: 'Only the host can start',
+  rebuild: 'Only the host can rebuild the deck',
+  replay: 'Only the host can start another round',
+};
 
 /**
  * A mediator claim older than this with no suggestion is assumed lost (e.g. the API
@@ -135,6 +145,8 @@ export class SessionService {
         shoppingLists: [],
         suggestion: null,
         mediatedAt: null,
+        round: 1,
+        pastRounds: [],
         updatedAt: this.now(),
       };
       if (await this.store.create(session)) {
@@ -219,6 +231,16 @@ export class SessionService {
   }
 
   /**
+   * Host only, once this round is decided (or everyone finished): "Play again".
+   * Same people, rules and link; this round is archived, and the next deck avoids
+   * every card already shown and learns from how each person swiped. Concurrent
+   * requests share one build, like start.
+   */
+  async playAgain(code: string, memberId: string): Promise<void> {
+    return this.deckJob(code, memberId, 'replay');
+  }
+
+  /**
    * Runs at most one deck build per session at a time. Checking for a running build
    * and registering a new one happen together under a short lock, so two requests
    * arriving at once can't both start one. The slow build itself runs outside it.
@@ -227,11 +249,7 @@ export class SessionService {
   private async deckJob(code: string, memberId: string, kind: DeckJobKind): Promise<void> {
     const { job } = await this.withLock(`deck-job:${code}`, async () => {
       const session = await this.require(code);
-      requireHost(
-        session,
-        memberId,
-        kind === 'start' ? 'Only the host can start' : 'Only the host can rebuild the deck',
-      );
+      requireHost(session, memberId, HOST_ONLY[kind]);
       const running = this.deckJobs.get(code);
       if (running?.kind === kind) return { job: running.promise };
       if (kind === 'start' && (running || session.status !== 'lobby')) {
@@ -239,6 +257,12 @@ export class SessionService {
       }
       if (kind === 'rebuild' && (running || session.status !== 'swiping')) {
         throw new SessionError('not_started', 'The host has not started yet');
+      }
+      if (kind === 'replay' && (running || !canPlayAgain(session))) {
+        throw new SessionError(
+          'not_allowed',
+          'Another round can start once this one has a pick or everyone has finished',
+        );
       }
 
       const promise = this.buildAndApply(code, memberId, kind, session).finally(() =>
@@ -267,7 +291,9 @@ export class SessionService {
       else heldBlurbs = blurbs;
     };
 
-    const { deck, filters } = await this.buildDeck(session, onBlurbs);
+    // "Play again" learns from the round being replaced, as well as earlier ones.
+    const history = kind === 'replay' ? withArchived(session) : session.pastRounds;
+    const { deck, filters } = await this.buildDeck(session, history, onBlurbs);
 
     await this.update(code, (current) => {
       // Re-checked under the session lock: the build above took a while.
@@ -278,6 +304,11 @@ export class SessionService {
         }
         current.status = 'swiping';
       } else {
+        if (kind === 'replay') {
+          // Archived from the latest state: votes cast while the deck was building count.
+          current.pastRounds = withArchived(current);
+          current.round += 1;
+        }
         current.swipes = [];
         current.matches = [];
         current.rerankedAt = null; // A new deck may be re-ranked once too.
@@ -576,6 +607,11 @@ export class SessionService {
         }
         session.members.splice(index, 1);
         session.swipes = session.swipes.filter((s) => s.memberId !== memberId);
+        // Leaving removes their votes from earlier rounds too: nothing of theirs stays.
+        session.pastRounds = session.pastRounds.map((r) => ({
+          ...r,
+          swipes: r.swipes.filter((s) => s.memberId !== memberId),
+        }));
         removed = true;
 
         if (session.members.length === 0) {
@@ -643,15 +679,24 @@ export class SessionService {
   /** Runs outside the session lock: it may call the recipe API. */
   private async buildDeck(
     session: StoredSession,
+    pastRounds: PastRound[],
     onBlurbs?: (blurbs: Map<string, string>) => void,
   ): Promise<{ deck: Card[]; filters: HardFilters }> {
     const group = mergePreferences(session.members);
     const code = session.code;
+    // Earlier rounds only ever nudge the ranking and avoid repeats. Hard rules come
+    // from what members confirmed, never from how they swiped.
+    const history = summarizeRounds(pastRounds, session.members);
+    if (history.roundsPlayed > 0) {
+      group.soft.cuisineScores = withHistory(group.soft.cuisineScores, history);
+    }
     try {
       const deck = await this.deckSource.buildDeck(group, {
         sessionCode: code,
         onProgress: (stage) => this.emit({ type: 'deck-progress', code, stage }),
         ...(onBlurbs ? { onBlurbs } : {}),
+        excludeCardIds: history.shownCardIds,
+        round: session.round + (pastRounds.length > session.pastRounds.length ? 1 : 0),
       });
       return { deck, filters: group.hard };
     } catch (err) {
@@ -760,6 +805,38 @@ function readyList(session: StoredSession, cardId: string): ShoppingList {
   return list;
 }
 
+/** The round has a pick (a match or an accepted compromise), or everyone finished. */
+function canPlayAgain(session: StoredSession): boolean {
+  if (session.status !== 'swiping') return false;
+  return (
+    session.matches.length > 0 ||
+    (session.suggestion !== null && session.suggestion.acceptedBy !== null) ||
+    isFinished(session)
+  );
+}
+
+/** Past rounds with the current one added (oldest dropped past the cap). */
+function withArchived(session: StoredSession): PastRound[] {
+  const deckIds = new Set(session.deck.map((c) => c.id));
+  const first = session.matches[0];
+  const accepted = session.suggestion?.acceptedBy ? session.suggestion : null;
+  const decided = first ?? accepted;
+  const title = (cardId: string) => session.deck.find((c) => c.id === cardId)?.title ?? cardId;
+  const round: PastRound = {
+    round: session.round,
+    cards: session.deck.map((c) => ({ id: c.id, title: c.title, tags: c.tags })),
+    swipes: session.swipes.filter((s) => deckIds.has(s.cardId)),
+    decision: decided
+      ? {
+          cardId: decided.cardId,
+          title: title(decided.cardId),
+          how: first ? 'match' : 'compromise',
+        }
+      : null,
+  };
+  return [...session.pastRounds, round].slice(-MAX_PAST_ROUNDS);
+}
+
 /** True once every current member has swiped every card. */
 function isFinished(session: StoredSession): boolean {
   if (session.status !== 'swiping' || session.members.length === 0) return false;
@@ -833,6 +910,8 @@ export function toView(session: StoredSession): SessionView {
       session.suggestion === null &&
       session.matches.length === 0 &&
       isFinished(session),
+    round: session.round,
+    canPlayAgain: canPlayAgain(session),
   };
 }
 

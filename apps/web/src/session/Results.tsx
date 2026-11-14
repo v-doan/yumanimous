@@ -32,9 +32,11 @@ interface ResultsProps {
   myId: string;
   onOpenList: (cardId: string) => void;
   onAcceptSuggestion: () => void;
+  /** Host only; shown once the round has a pick or everyone finished. */
+  onPlayAgain?: () => void;
 }
 
-export function Results({ view, myId, onOpenList, onAcceptSuggestion }: ResultsProps) {
+export function Results({ view, myId, onOpenList, onAcceptSuggestion, onPlayAgain }: ResultsProps) {
   const rule = matchRules[view.matchRule];
   const memberIds = view.members.map((m) => m.id);
   const matchOrder = new Map(view.matches.map((m, i) => [m.cardId, i]));
@@ -76,6 +78,15 @@ export function Results({ view, myId, onOpenList, onAcceptSuggestion }: ResultsP
               : 'Nothing got enough yums. Here’s what came closest.'
             : `Waiting on ${stillSwiping.map((m) => m.name).join(', ')}.`}
         </p>
+
+        {view.canPlayAgain &&
+          (onPlayAgain ? (
+            <button type="button" className={ui.secondary} onClick={onPlayAgain}>
+              Play again
+            </button>
+          ) : (
+            <p className={ui.muted}>The host can start another round with a fresh deck.</p>
+          ))}
 
         <ol className={styles.board} aria-label="Leaderboard">
           {rows.map(({ card, tally, outcome }) => (

@@ -4,6 +4,7 @@ import type {
   Match,
   MemberPreferences,
   MatchRuleId,
+  PastRound,
   SessionMode,
   SessionStatus,
   ShoppingList,
@@ -45,6 +46,10 @@ export interface StoredSession {
   suggestion: Suggestion | null;
   /** When the mediator was started for this deck (it runs once); null if not yet. */
   mediatedAt: number | null;
+  /** Phase 8: the current round (1 until "Play again"). */
+  round: number;
+  /** Earlier rounds, oldest first, at most MAX_PAST_ROUNDS. */
+  pastRounds: PastRound[];
   updatedAt: number;
 }
 

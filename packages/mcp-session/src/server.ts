@@ -11,6 +11,7 @@ import {
   MemberPreferencesSchema,
   mergePreferences,
   SessionCodeSchema,
+  summarizeRounds,
   uncoveredRules,
   type CardOutcome,
 } from '@yumanimous/shared';
@@ -99,6 +100,26 @@ export const PreferencesOutputSchema = z.object({
   deckFilters: HardFiltersSchema.nullable(),
   /** Members' hard rules the current deck was NOT filtered for. */
   uncovered: z.array(AttributedRuleSchema),
+});
+
+export const RoundHistoryOutputSchema = z.object({
+  code: z.string(),
+  /** The round being played now; earlier rounds are summarized below. */
+  round: z.number().int(),
+  roundsPlayed: z.number().int(),
+  /** Cards already shown in earlier rounds: don't show them again. */
+  shownCardIds: z.array(z.string()),
+  picks: z.array(
+    z.object({ round: z.number().int(), title: z.string(), how: z.enum(['match', 'compromise']) }),
+  ),
+  members: z.array(
+    z.object({
+      memberId: z.string(),
+      name: z.string(),
+      yumTags: z.array(z.string()),
+      neverTags: z.array(z.string()),
+    }),
+  ),
 });
 
 /**
@@ -264,6 +285,24 @@ export function createSessionServer({ pool }: { pool: pg.Pool }) {
           uncovered: [...uncovered].map(([rule, members]) => ({ rule, members })),
         };
       }),
+  );
+
+  server.registerTool(
+    'get_round_history',
+    {
+      title: 'Get earlier rounds',
+      description: `What earlier rounds of this session (after "Play again") say about the group: cards already shown, what each round picked, and per member the cuisines they said yum to and the ones they skipped at least twice without ever saying yum ("neverTags"). These are taste hints for ranking, never food rules. Empty in round 1. ${UNTRUSTED_NAMES}`,
+      inputSchema: { code: codeInput },
+      outputSchema: RoundHistoryOutputSchema.shape,
+      annotations,
+    },
+    async ({ code }) =>
+      withSession(code, (s) => ({
+        code: s.code,
+        round: s.round,
+        // The same pure summary the API ranks with, so the agent and the code agree.
+        ...summarizeRounds(s.pastRounds, s.members),
+      })),
   );
 
   async function withSession(

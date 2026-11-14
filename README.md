@@ -3,11 +3,11 @@
 Swipe-to-decide for groups: everyone swipes on a shared deck, and it's a match when the group is
 _yumanimous_. Zero install: join from a link in the group chat.
 
-> Work in progress. Phase 7: after a match, a sous-chef agent turns the recipe into one shared
-> shopping list; when nothing matches, a mediator agent suggests the fairest compromise. Earlier
-> phases: an orchestrator with scout, curator and writer subagents that builds each deck (under 1¢),
-> live sessions over WebSockets, Postgres, a cached recipe API, MCP servers, and food rules that bind
-> the whole group.
+> Work in progress. Phase 8: "Play again" runs another round with the same people, and the next deck
+> learns from how everyone swiped. Earlier phases: a sous-chef agent's shared shopping list and a
+> no-match mediator, an orchestrator with scout, curator and writer subagents that builds each deck
+> (under 1¢), live sessions over WebSockets, Postgres, a cached recipe API, MCP servers, and food
+> rules that bind the whole group.
 
 ## Quick start
 
@@ -91,12 +91,14 @@ Only the confirmed chips are sent (all enums or validated short words), never th
 When the host starts, a Claude **orchestrator** (Claude Agent SDK, `claude-haiku-5-5`) delegates to
 three subagents, each limited to the tools its job needs:
 
-| Agent        | Tools                                                                      | Job                                           |
-| ------------ | -------------------------------------------------------------------------- | --------------------------------------------- |
-| orchestrator | `Agent` (delegation) only                                                  | Runs scout, then curator, then writer         |
-| scout        | `list_candidates`, `search_candidates`, `get_member_preferences`           | Widens the pool towards the group's tastes    |
-| curator      | `list_candidates`, `submit_order`, `get_member_preferences`, `get_session` | Picks and orders 20 cards for the whole group |
-| writer       | `list_chosen`, `submit_blurbs`                                             | A short, fun blurb per card                   |
+| Agent        | Tools                                                                                            | Job                                           |
+| ------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| orchestrator | `Agent` (delegation) only                                                                        | Runs scout, then curator, then writer         |
+| scout        | `list_candidates`, `search_candidates`, `get_member_preferences`, `get_round_history`¹           | Widens the pool towards the group's tastes    |
+| curator      | `list_candidates`, `submit_order`, `get_member_preferences`, `get_session`, `get_round_history`¹ | Picks and orders 20 cards for the whole group |
+| writer       | `list_chosen`, `submit_blurbs`                                                                   | A short, fun blurb per card                   |
+
+¹ From round 2 (see [Play again](#play-again-round-memory)).
 
 The session tools are the Phase 4 `mcp-session` server, attached in-process on a read-only Postgres
 connection. While it runs, everyone sees _"Scouting recipes… Picking dishes everyone will like…"_
@@ -146,6 +148,7 @@ A re-rank costs about $0.001 (3 s). Three limits stack: a per-run cap, the app's
 `AI_MONTHLY_BUDGET_USD` (default $8, after which AI switches off until next month) and the Console's
 workspace spend limit. At these prices $8 covers well over a thousand sessions a month.
 
+Set `AI_TRACE=true` to log one line per agent message (which subagent ran, every tool call, timing).
 Two dev scripts: `npm run agent:smoke -w @yumanimous/api` (one tiny real call, under 1¢, to check a
 new machine) and `npm run deck:bench -w @yumanimous/api -- [--trace]` (one real build for a fixed
 test group in a throwaway session: time per stage, cost, and quality checks).
@@ -189,6 +192,32 @@ that finished the session, in the background.
 
 Both are logged in `ai_calls` and shown on `/debug`, under the same monthly budget.
 
+## Play again (round memory)
+
+When a round has a pick, or everyone has finished, the host can tap **Play again**: same people, same
+food rules, same link, and a fresh deck that learns from the round before.
+
+- **No repeats.** Every card already shown stays out of the next deck, while enough other safe cards
+  exist (otherwise they're dealt last rather than leaving the round empty).
+- **It learns each person's taste.** [`summarizeRounds`](packages/shared/src/rounds.ts) finds, per
+  member, the cuisines they said yum to and the ones they skipped at least twice without ever saying
+  yum. Those nudge the ranking at half the weight of a stated preference, in code, so the non-AI deck
+  does it too. From round 2 the scout and curator also read them through `get_round_history`.
+- **Swipes never become rules.** Only cuisine tags count: diet tags ("vegetarian") are ignored,
+  because a diet is a hard rule that only the member states. Hard filters come from confirmed food
+  rules alone.
+- **Nothing outlives the session.** Up to 5 earlier rounds are kept in the session row and deleted
+  with it after a day idle. Someone who leaves takes their votes from earlier rounds with them.
+
+Measured: in round 1 both testers said yum to the Mexican and Chinese dishes and skipped every
+American and Mediterranean one. Round 2 had no repeats, opened with two Mexican dishes and an Asian
+one by the sixth card, and put the Mediterranean and American dishes last, for $0.0056 (round 1:
+$0.0047).
+
+Why not saved groups? Without accounts, a "saved group" is a fragile half-account (a key in one
+browser's storage), and it adds steps to a flow whose point is _open the link, type a name, swipe_.
+Link sessions stay one-time by design.
+
 ## Persistence
 
 Postgres holds sessions, members, swipes and matches (schema:
@@ -229,6 +258,7 @@ transport-agnostic `createXServer()` plus a small `stdio.ts` launcher.
 |                      | `get_swipe_history`      | Each member's yums and skips with card titles and tags (for re-ranking)                                  |
 |                      | `get_vote_tally`         | Per-card yums, skips and outcome under the session's rule, best first (for the no-match mediator)        |
 |                      | `get_member_preferences` | Each member's confirmed rules, the merged hard/soft rules, and what the current deck wasn't filtered for |
+|                      | `get_round_history`      | Earlier rounds: cards shown, picks, and each member's yum and never cuisines (for "Play again")          |
 
 Design choices:
 

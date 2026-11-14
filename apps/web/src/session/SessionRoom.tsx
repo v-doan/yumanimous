@@ -32,6 +32,18 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
   /** The recipe someone tapped "Shopping list" on, while choosing servings. */
   const [servingsFor, setServingsFor] = useState<string | null>(null);
   const cancelServings = useCallback(() => setServingsFor(null), []);
+  const [confirmReplay, setConfirmReplay] = useState(false);
+  const cancelReplay = useCallback(() => setConfirmReplay(false), []);
+
+  // A new round starts on the new deck for everyone, not on last round's results.
+  // Reset during render when the round changes (React's pattern for derived state).
+  const round = view?.round;
+  const [shownRound, setShownRound] = useState(round);
+  if (round !== shownRound) {
+    setShownRound(round);
+    setShowResults(false);
+    setListFor(null);
+  }
 
   useEffect(() => {
     if (ended === 'invalid-identity') onLostIdentity();
@@ -99,6 +111,7 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
       <div className={styles.bar}>
         <span className={ui.muted}>
           {me?.name} · {view.code}
+          {view.round > 1 && ` · Round ${view.round}`}
           {session.status === 'reconnecting' && ' · reconnecting…'}
         </span>
         <span className={styles.barActions}>
@@ -157,6 +170,7 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
             myId={membership.memberId}
             onOpenList={openShoppingList}
             onAcceptSuggestion={session.acceptSuggestion}
+            {...(me?.isHost ? { onPlayAgain: () => setConfirmReplay(true) } : {})}
           />
         ) : (
           <SwipeDeck cards={view.deck} index={index} onSwipe={session.swipe} />
@@ -193,6 +207,19 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
             void session.makeList(servingsCard.id, servings);
           }}
           onCancel={cancelServings}
+        />
+      )}
+
+      {confirmReplay && (
+        <ConfirmDialog
+          title="Play another round?"
+          message="Same people, a fresh deck that learns from this round. This round’s results and shopping lists will be cleared."
+          confirmLabel="Play again"
+          onConfirm={() => {
+            setConfirmReplay(false);
+            void session.playAgain();
+          }}
+          onCancel={cancelReplay}
         />
       )}
 

@@ -8,7 +8,7 @@ import {
 import type { AiCallKind, AiCallLog, AiCallStatus, BudgetGuard } from '../ai/aiCallLog.js';
 import { AiRunner } from '../ai/aiRunner.js';
 import type { AiUsage, DeckAgent, DeckProposal } from '../ai/deckAgent.js';
-import type { DeckBuildContext, DeckSource } from './deckSource.js';
+import { preferUnseen, seenLast, type DeckBuildContext, type DeckSource } from './deckSource.js';
 import { softScore, type RecipeDeckSource } from './recipeDeckSource.js';
 
 export interface AiDeckSourceOptions {
@@ -63,8 +63,11 @@ export class AiDeckSource implements DeckSource {
 
   async buildDeck(group?: GroupPreferences, context?: DeckBuildContext): Promise<Card[]> {
     // DeckError (no safe pool at all) propagates: neither AI nor non-AI can help.
-    const pool = await this.opts.base.candidatePool(group);
-    const fallback = () => this.opts.base.deal(pool, group, this.deckSize);
+    // Play again: cards from earlier rounds are kept out of the pool (while enough
+    // fresh ones exist), out of the scout's searches, and last in any deck.
+    const seen = new Set(context?.excludeCardIds ?? []);
+    const pool = preferUnseen(await this.opts.base.candidatePool(group), seen);
+    const fallback = () => seenLast(this.opts.base.deal(pool, group, this.deckSize), seen);
     if (!context) return fallback();
 
     const sessionCode = context.sessionCode;
@@ -81,9 +84,11 @@ export class AiDeckSource implements DeckSource {
         deckSize: this.deckSize,
         pool,
         searchMore: this.opts.base.canSearch
-          ? (extra) => this.opts.base.searchMore(hard, extra)
+          ? async (extra) =>
+              (await this.opts.base.searchMore(hard, extra)).filter((c) => !seen.has(c.id))
           : null,
         onProgress: context.onProgress,
+        round: context.round ?? 1,
         onOrder: (chosen, candidates) => orderReady({ chosen, candidates }),
         signal,
       }),
@@ -108,7 +113,7 @@ export class AiDeckSource implements DeckSource {
         void running.then((outcome) =>
           this.finishInBackground(sessionCode, outcome, early, context),
         );
-        return early;
+        return seenLast(early, seen);
       }
       // Too few valid cards to go live on: wait for the run and decide then.
     }
@@ -119,7 +124,7 @@ export class AiDeckSource implements DeckSource {
     const deck = assembleDeck(outcome.result, this.deckSize, group);
     await this.record(sessionCode, 'deck', deck ? 'ok' : 'fallback', outcome.usage, null);
     if (!deck) this.warn(`[ai] ${sessionCode}: unusable deck proposal, using the non-AI deck`);
-    return deck ?? fallback();
+    return deck ? seenLast(deck, seen) : fallback();
   }
 
   /**

@@ -36,7 +36,7 @@ export interface ServerOptions {
    * AI deck building (Phase 6). Needs Postgres (for the read-only session tools and
    * the cost log) and ANTHROPIC_API_KEY in the environment. Off when omitted.
    */
-  ai?: { model: string; monthlyBudgetUsd: number } | undefined;
+  ai?: { model: string; monthlyBudgetUsd: number; trace?: boolean } | undefined;
   /** Exposes GET /api/debug/ai (AI cost and latency). Development only. */
   debugRoutes?: boolean;
   /** How long a member may be offline (refresh, tunnel, locked phone) before removal. */
@@ -91,6 +91,8 @@ export async function createServer({
   let aiDeck: AiDeckSource | null = null;
   let followUpAi: ConstructorParameters<typeof FollowUpService>[0]['ai'];
   if (ai && pool && databaseUrl) {
+    // Guest names can appear in tool inputs; the trace is for local debugging only.
+    const trace = ai.trace ? { trace: (line: string) => console.log(`[ai] ${line}`) } : {};
     aiLog = new PostgresAiCallLog(pool);
     budget = new BudgetGuard(aiLog, ai.monthlyBudgetUsd);
     // The agents read sessions through mcp-session on a connection Postgres keeps
@@ -101,6 +103,7 @@ export async function createServer({
       agent: new ClaudeFollowUpAgent({
         model: ai.model,
         createSessionServer: () => createSessionServer({ pool: sessionPool }),
+        ...trace,
       }),
       runner: new AiRunner({ log: aiLog, budget, model: ai.model }),
     };
@@ -109,6 +112,7 @@ export async function createServer({
       agent: new ClaudeDeckAgent({
         model: ai.model,
         createSessionServer: () => createSessionServer({ pool: sessionPool }),
+        ...trace,
       }),
       log: aiLog,
       budget,

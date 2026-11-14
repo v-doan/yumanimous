@@ -35,6 +35,30 @@ export interface DeckBuildContext {
    * group can start swiping while the writer is still writing.
    */
   onBlurbs?: (blurbs: Map<string, string>) => void;
+  /**
+   * Phase 8: cards shown in earlier rounds of this session. The new deck avoids them
+   * while enough other safe cards exist (see `preferUnseen`).
+   */
+  excludeCardIds?: string[];
+  /** Which round the deck is for (1 for the first deck). */
+  round?: number;
+}
+
+/** Fewer unseen cards than this and a round would be too short: repeats are allowed. */
+export const MIN_FRESH_CARDS = 5;
+
+/**
+ * The cards a new round may use: the ones nobody has seen yet, if there are enough;
+ * otherwise everything (a short pool after several rounds beats no deck).
+ */
+export function preferUnseen(pool: Card[], exclude: ReadonlySet<string>): Card[] {
+  const fresh = pool.filter((c) => !exclude.has(c.id));
+  return fresh.length >= MIN_FRESH_CARDS ? fresh : pool;
+}
+
+/** Cards already seen go to the back of the deck (stable otherwise). */
+export function seenLast(deck: Card[], exclude: ReadonlySet<string>): Card[] {
+  return [...deck.filter((c) => !exclude.has(c.id)), ...deck.filter((c) => exclude.has(c.id))];
 }
 
 export type DeckProgressStage = 'scouting' | 'curating' | 'writing';

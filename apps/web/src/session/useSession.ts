@@ -137,6 +137,12 @@ export function useSession(membership: Membership) {
     if (result && !result.ok) setError(result.error);
   }, []);
 
+  /** Host: start another round with a fresh deck that learns from this one. */
+  const playAgain = useCallback(async () => {
+    const result = await socketRef.current?.emitWithAck('session:replay');
+    if (result && !result.ok) setError(result.error);
+  }, []);
+
   const acceptSuggestion = useCallback(async () => {
     const result = await socketRef.current?.emitWithAck('suggestion:accept');
     if (result && !result.ok) setError(result.error);
@@ -170,6 +176,7 @@ export function useSession(membership: Membership) {
     toggleLine,
     setServings,
     acceptSuggestion,
+    playAgain,
     leave,
     dismissMatch,
     clearError,
