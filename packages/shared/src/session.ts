@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CardSchema } from './card.js';
+import { ShoppingListSchema, SuggestionSchema } from './followUps.js';
 import { MatchRuleIdSchema } from './matchRules.js';
 import { GuestNameSchema, MemberIdSchema, MemberSchema } from './member.js';
 import { AttributedRuleSchema, HardFiltersSchema } from './preferences.js';
@@ -59,6 +60,15 @@ export const SessionViewSchema = z.object({
    * peanut allergy. Shown as a warning; the host can rebuild the deck.
    */
   uncovered: z.array(AttributedRuleSchema),
+  /** Shopping lists made for matched (or accepted) recipes, one per card. */
+  shoppingLists: z.array(ShoppingListSchema),
+  /**
+   * The mediator's compromise when everyone finished and nothing matched. null until
+   * it has been worked out (and in every other case).
+   */
+  suggestion: SuggestionSchema.nullable(),
+  /** True while the mediator is working on a suggestion. */
+  mediating: z.boolean(),
 });
 
 export type SessionView = z.infer<typeof SessionViewSchema>;

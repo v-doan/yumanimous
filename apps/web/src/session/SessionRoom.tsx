@@ -8,6 +8,8 @@ import { MatchOverlay } from './MatchOverlay';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { PreferencesPanel } from './PreferencesPanel';
 import { Results } from './Results';
+import { ServingsDialog } from './ServingsDialog';
+import { ShoppingListView } from './ShoppingList';
 import { useSession } from './useSession';
 import ui from '../ui/ui.module.css';
 import styles from './SessionRoom.module.css';
@@ -25,6 +27,11 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const cancelLeave = useCallback(() => setConfirmLeave(false), []);
   const [rulesAsked, setRulesAsked] = useRulesAsked(membership);
+  /** The recipe whose shopping list is open, if any. */
+  const [listFor, setListFor] = useState<string | null>(null);
+  /** The recipe someone tapped "Shopping list" on, while choosing servings. */
+  const [servingsFor, setServingsFor] = useState<string | null>(null);
+  const cancelServings = useCallback(() => setServingsFor(null), []);
 
   useEffect(() => {
     if (ended === 'invalid-identity') onLostIdentity();
@@ -75,6 +82,14 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
   const doneSwiping = index === -1;
 
   const matchedCard = currentMatch ? view.deck.find((c) => c.id === currentMatch) : undefined;
+  const openList = view.shoppingLists.find((l) => l.cardId === listFor);
+  const servingsCard = view.deck.find((c) => c.id === servingsFor);
+
+  // An existing list (any state) opens straight away; otherwise ask for servings.
+  const openShoppingList = (cardId: string) => {
+    if (view.shoppingLists.some((l) => l.cardId === cardId)) setListFor(cardId);
+    else setServingsFor(cardId);
+  };
   // Joined after the start: one chance to add food rules before the first card.
   const askForRules =
     view.status === 'swiping' && !rulesAsked && !me?.preferences && mine.size === 0;
@@ -128,8 +143,21 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
               onSkip={setRulesAsked}
             />
           </div>
+        ) : openList ? (
+          <ShoppingListView
+            list={openList}
+            onToggle={(lineId, have) => session.toggleLine(openList.cardId, lineId, have)}
+            onServings={(servings) => session.setServings(openList.cardId, servings)}
+            onRetry={() => session.makeList(openList.cardId, openList.servings)}
+            onBack={() => setListFor(null)}
+          />
         ) : doneSwiping || showResults ? (
-          <Results view={view} myId={membership.memberId} />
+          <Results
+            view={view}
+            myId={membership.memberId}
+            onOpenList={openShoppingList}
+            onAcceptSuggestion={session.acceptSuggestion}
+          />
         ) : (
           <SwipeDeck cards={view.deck} index={index} onSwipe={session.swipe} />
         )}
@@ -147,6 +175,24 @@ export function SessionRoom({ membership, onLostIdentity }: SessionRoomProps) {
             session.dismissMatch();
             setShowResults(true);
           }}
+          onShoppingList={() => {
+            session.dismissMatch();
+            setShowResults(true); // So "Back" from the list lands on the results.
+            openShoppingList(matchedCard.id);
+          }}
+        />
+      )}
+
+      {servingsCard && (
+        <ServingsDialog
+          title={servingsCard.title}
+          initial={Math.max(1, view.members.length)}
+          onConfirm={(servings) => {
+            setServingsFor(null);
+            setListFor(servingsCard.id);
+            void session.makeList(servingsCard.id, servings);
+          }}
+          onCancel={cancelServings}
         />
       )}
 

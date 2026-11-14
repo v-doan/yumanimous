@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { tallyCard, type Card, type SessionView } from '@yumanimous/shared';
+import { hasRecipeDetails, tallyCard, type Card, type SessionView } from '@yumanimous/shared';
 import { CardImage } from '../deck/CardImage';
 import ui from '../ui/ui.module.css';
 import styles from './MatchOverlay.module.css';
@@ -10,10 +10,18 @@ interface MatchOverlayProps {
   view: SessionView;
   onKeepSwiping: () => void;
   onSeeResults: () => void;
+  /** Recipes from the recipe API only: they have ingredients. */
+  onShoppingList: () => void;
 }
 
 /** "It's a match!" shown to everyone at the same moment. */
-export function MatchOverlay({ card, view, onKeepSwiping, onSeeResults }: MatchOverlayProps) {
+export function MatchOverlay({
+  card,
+  view,
+  onKeepSwiping,
+  onSeeResults,
+  onShoppingList,
+}: MatchOverlayProps) {
   const reduceMotion = useReducedMotion();
   const firstButton = useRef<HTMLButtonElement>(null);
 
@@ -50,6 +58,11 @@ export function MatchOverlay({ card, view, onKeepSwiping, onSeeResults }: MatchO
           <button ref={firstButton} type="button" className={ui.primary} onClick={onKeepSwiping}>
             Keep swiping
           </button>
+          {hasRecipeDetails(card.id) && (
+            <button type="button" className={ui.secondary} onClick={onShoppingList}>
+              Shopping list
+            </button>
+          )}
           <button type="button" className={ui.secondary} onClick={onSeeResults}>
             See results
           </button>

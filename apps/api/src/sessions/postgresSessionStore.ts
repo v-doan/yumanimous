@@ -3,6 +3,8 @@ import {
   CardSchema,
   HardFiltersSchema,
   MemberPreferencesSchema,
+  ShoppingListSchema,
+  SuggestionSchema,
   type Card,
   type Match,
   type MatchRuleId,
@@ -123,6 +125,8 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
     host_id: string;
     deck_filters: unknown;
     reranked_at: Date | null;
+    suggestion: unknown;
+    mediated_at: Date | null;
     updated_at: Date;
   }>(`SELECT * FROM sessions WHERE code = $1 ${forUpdate ? 'FOR UPDATE' : ''}`, [code]);
   const row = session.rows[0];
@@ -163,6 +167,11 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
     [code],
   );
 
+  const lists = await db.query<{ list: unknown }>(
+    'SELECT list FROM shopping_lists WHERE session_code = $1 ORDER BY card_id',
+    [code],
+  );
+
   const stored: StoredSession = {
     code: row.code,
     mode: row.mode,
@@ -190,6 +199,9 @@ async function load(db: Queryable, code: string, forUpdate: boolean) {
       cardId: m.card_id,
       matchedAt: m.matched_at.getTime(),
     })),
+    shoppingLists: lists.rows.map((r) => ShoppingListSchema.parse(r.list)),
+    suggestion: row.suggestion === null ? null : SuggestionSchema.parse(row.suggestion),
+    mediatedAt: toMs(row.mediated_at),
     updatedAt: row.updated_at.getTime(),
   };
   return stored;
@@ -245,7 +257,7 @@ const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringif
 async function persistDiff(db: pg.PoolClient, before: StoredSession, after: StoredSession) {
   await db.query(
     `UPDATE sessions SET status = $2, host_id = $3, match_rule = $4, deck_filters = $5,
-       reranked_at = $6, updated_at = $7 WHERE code = $1`,
+       reranked_at = $6, updated_at = $7, suggestion = $8, mediated_at = $9 WHERE code = $1`,
     [
       after.code,
       after.status,
@@ -254,8 +266,31 @@ async function persistDiff(db: pg.PoolClient, before: StoredSession, after: Stor
       after.deckFilters,
       after.rerankedAt === null ? null : toDate(after.rerankedAt),
       toDate(after.updatedAt),
+      after.suggestion,
+      after.mediatedAt === null ? null : toDate(after.mediatedAt),
     ],
   );
+
+  // Shopping lists: small JSON documents, written whole when they change.
+  const oldLists = new Map(before.shoppingLists.map((l) => [l.cardId, l]));
+  const newListIds = new Set(after.shoppingLists.map((l) => l.cardId));
+  for (const cardId of oldLists.keys()) {
+    if (!newListIds.has(cardId)) {
+      await db.query('DELETE FROM shopping_lists WHERE session_code = $1 AND card_id = $2', [
+        after.code,
+        cardId,
+      ]);
+    }
+  }
+  for (const list of after.shoppingLists) {
+    if (sameJson(oldLists.get(list.cardId), list)) continue;
+    await db.query(
+      `INSERT INTO shopping_lists (session_code, card_id, list, updated_at) VALUES ($1, $2, $3, now())
+       ON CONFLICT (session_code, card_id) DO UPDATE
+         SET list = excluded.list, updated_at = excluded.updated_at`,
+      [after.code, list.cardId, list],
+    );
+  }
 
   // A new deck (the start, or a host rebuild) replaces the old one wholesale.
   // Compared by content, not just ids: a re-rank changes the order, and blurbs can

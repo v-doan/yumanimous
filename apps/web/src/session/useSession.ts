@@ -117,6 +117,31 @@ export function useSession(membership: Membership) {
     if (result && !result.ok) setError(result.error);
   }, []);
 
+  /** Anyone, for a matched (or accepted) recipe. Progress arrives in the state. */
+  const makeList = useCallback(async (cardId: string, servings: number) => {
+    const result = await socketRef.current?.emitWithAck('shopping:create', { cardId, servings });
+    if (result && !result.ok) setError(result.error);
+  }, []);
+
+  const toggleLine = useCallback(async (cardId: string, lineId: string, have: boolean) => {
+    const result = await socketRef.current?.emitWithAck('shopping:toggle', {
+      cardId,
+      lineId,
+      have,
+    });
+    if (result && !result.ok) setError(result.error);
+  }, []);
+
+  const setServings = useCallback(async (cardId: string, servings: number) => {
+    const result = await socketRef.current?.emitWithAck('shopping:servings', { cardId, servings });
+    if (result && !result.ok) setError(result.error);
+  }, []);
+
+  const acceptSuggestion = useCallback(async () => {
+    const result = await socketRef.current?.emitWithAck('suggestion:accept');
+    if (result && !result.ok) setError(result.error);
+  }, []);
+
   const leave = useCallback(() => {
     socketRef.current?.emit('session:leave', () => {});
     clearIdentity(code);
@@ -141,6 +166,10 @@ export function useSession(membership: Membership) {
     start,
     setPreferences,
     rebuild,
+    makeList,
+    toggleLine,
+    setServings,
+    acceptSuggestion,
     leave,
     dismissMatch,
     clearError,

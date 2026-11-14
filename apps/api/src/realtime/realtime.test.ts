@@ -251,3 +251,103 @@ describe('presence', () => {
     expect(err.message).toBe('unauthorized');
   });
 });
+
+describe('after the decision (Phase 7)', () => {
+  const recipeCards = [1, 2].map((n) => ({
+    id: `spoonacular:${n}`,
+    title: `Recipe ${n}`,
+    tags: [],
+    blurb: 'Tasty.',
+  }));
+  const garlic = [{ name: 'garlic', amount: 2, unit: 'cloves', aisle: 'Produce' }];
+
+  async function twoPeople() {
+    await server.close();
+    server = await createServer({
+      port: 0,
+      deckSource: { mode: 'cook-in', buildDeck: async () => recipeCards },
+      followUps: {
+        shoppingList: async ({ servings }) => ({
+          recipeServings: 2,
+          ingredients: garlic,
+          lines: [
+            {
+              id: 'l1',
+              name: 'Garlic',
+              aisle: 'Produce',
+              quantity: `${servings} cloves`,
+              covers: [0],
+              likelyAtHome: false,
+              have: false,
+            },
+          ],
+          source: 'ai',
+        }),
+        mediate: async ({ contenders }) => ({
+          cardId: contenders[0]!.cardId,
+          reason: 'It got the most yums.',
+          source: 'fallback',
+        }),
+      },
+    });
+    const hostM = await createSession();
+    const { client: host } = await connectAs(hostM);
+    const guestM = await joinSession(hostM.code, 'Sam');
+    const { client: guest } = await connectAs(guestM);
+    await host.emitWithAck('session:start');
+    await waitForState(guest, (v) => v.status === 'swiping');
+    return { host, guest };
+  }
+
+  it('makes a shopping list for a match, shares ticks and servings with everyone', async () => {
+    const { host, guest } = await twoPeople();
+    await swipe(host, 'spoonacular:1', 'like');
+    await swipe(guest, 'spoonacular:1', 'like');
+
+    // Not matched: refused.
+    expect(
+      await guest.emitWithAck('shopping:create', { cardId: 'spoonacular:2', servings: 2 }),
+    ).toEqual({ ok: false, error: 'A list can only be made for a matched recipe' });
+    // Bad payload: refused before it reaches the service.
+    expect(
+      await guest.emitWithAck('shopping:create', { cardId: 'spoonacular:1', servings: 99 }),
+    ).toEqual({
+      ok: false,
+      error: 'Invalid input',
+    });
+
+    const hostSeesList = waitForState(host, (v) => v.shoppingLists[0]?.status === 'ready');
+    expect(
+      await guest.emitWithAck('shopping:create', { cardId: 'spoonacular:1', servings: 2 }),
+    ).toEqual({ ok: true });
+    expect((await hostSeesList).shoppingLists[0]!.lines[0]!.quantity).toBe('2 cloves');
+
+    const guestSeesTick = waitForState(guest, (v) => v.shoppingLists[0]?.lines[0]?.have === true);
+    await host.emitWithAck('shopping:toggle', {
+      cardId: 'spoonacular:1',
+      lineId: 'l1',
+      have: true,
+    });
+    await guestSeesTick;
+
+    const guestSeesServings = waitForState(guest, (v) => v.shoppingLists[0]?.servings === 6);
+    expect(
+      await host.emitWithAck('shopping:servings', { cardId: 'spoonacular:1', servings: 6 }),
+    ).toEqual({ ok: true });
+    expect((await guestSeesServings).shoppingLists[0]!.lines[0]!.quantity).toBe('6 cloves');
+  });
+
+  it('suggests a compromise when nothing matched, and anyone can accept it', async () => {
+    const { host, guest } = await twoPeople();
+    const guestSeesSuggestion = waitForState(guest, (v) => v.suggestion !== null);
+    await swipe(host, 'spoonacular:1', 'skip');
+    await swipe(host, 'spoonacular:2', 'like');
+    await swipe(guest, 'spoonacular:1', 'skip');
+    await swipe(guest, 'spoonacular:2', 'skip');
+    expect((await guestSeesSuggestion).suggestion?.cardId).toBe('spoonacular:2');
+
+    const hostSeesAccepted = waitForState(host, (v) => v.suggestion?.acceptedBy !== null);
+    expect(await guest.emitWithAck('suggestion:accept')).toEqual({ ok: true });
+    await hostSeesAccepted;
+  });
+});

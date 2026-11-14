@@ -29,5 +29,8 @@ export const sessionView = (overrides: Partial<SessionView> = {}): SessionView =
   finished: false,
   deckFilters: null,
   uncovered: [],
+  shoppingLists: [],
+  suggestion: null,
+  mediating: false,
   ...overrides,
 });

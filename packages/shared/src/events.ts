@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { SessionCodeSchema, type SessionView } from './session.js';
 import type { MemberPreferences } from './preferences.js';
 import type { SwipeInput } from './swipe.js';
+import type { CreateShoppingList, SetShoppingServings, ToggleShoppingLine } from './followUps.js';
 
 /**
  * The Socket.io contract, shared by client and server so an event name or payload
@@ -35,6 +36,17 @@ export interface ClientToServerEvents {
   'session:rebuild': (ack: Ack) => void;
   /** Leave for good: the member and their votes are removed. */
   'session:leave': (ack: Ack) => void;
+  /**
+   * Anyone, for a matched (or accepted) recipe: make its shopping list for this many
+   * servings. One list per card; a second request joins the one being made.
+   */
+  'shopping:create': (input: CreateShoppingList, ack: Ack) => void;
+  /** "We have it" on one line, for everyone. */
+  'shopping:toggle': (input: ToggleShoppingLine, ack: Ack) => void;
+  /** Rescale an existing list. Pure arithmetic on the server: no AI call. */
+  'shopping:servings': (input: SetShoppingServings, ack: Ack) => void;
+  /** Anyone: "Go with it" on the mediator's suggestion. */
+  'suggestion:accept': (ack: Ack) => void;
 }
 
 export interface ServerToClientEvents {

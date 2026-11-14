@@ -6,7 +6,8 @@ import {
   type GroupPreferences,
 } from '@yumanimous/shared';
 import type { AiCallKind, AiCallLog, AiCallStatus, BudgetGuard } from '../ai/aiCallLog.js';
-import { AgentRunError, type AiUsage, type DeckAgent, type DeckProposal } from '../ai/deckAgent.js';
+import { AiRunner } from '../ai/aiRunner.js';
+import type { AiUsage, DeckAgent, DeckProposal } from '../ai/deckAgent.js';
 import type { DeckBuildContext, DeckSource } from './deckSource.js';
 import { softScore, type RecipeDeckSource } from './recipeDeckSource.js';
 
@@ -44,12 +45,20 @@ export class AiDeckSource implements DeckSource {
   private readonly timeoutMs: number;
   private readonly rerankTimeoutMs: number;
   private readonly warn: (message: string) => void;
+  /** Budget check, timeout and cost log: shared with the Phase 7 follow-ups. */
+  private readonly runner: AiRunner;
 
   constructor(private readonly opts: AiDeckSourceOptions) {
     this.deckSize = opts.deckSize ?? 20;
     this.timeoutMs = opts.timeoutMs ?? 60_000;
     this.rerankTimeoutMs = opts.rerankTimeoutMs ?? 45_000;
     this.warn = opts.warn ?? ((m) => console.warn(m));
+    this.runner = new AiRunner({
+      log: opts.log,
+      budget: opts.budget,
+      model: opts.agent.model,
+      warn: this.warn,
+    });
   }
 
   async buildDeck(group?: GroupPreferences, context?: DeckBuildContext): Promise<Card[]> {
@@ -152,86 +161,29 @@ export class AiDeckSource implements DeckSource {
     return order;
   }
 
-  private async withinBudget(sessionCode: string, kind: AiCallKind): Promise<boolean> {
-    const budget = await this.opts.budget.status();
-    if (budget.allowed) return true;
-    this.warn(
-      `[ai] monthly budget reached ($${budget.spentUsd.toFixed(2)} of $${budget.budgetUsd}); skipping ${kind}`,
-    );
-    await this.record(sessionCode, kind, 'skipped', null, 'Monthly AI budget reached');
-    return false;
+  private withinBudget(sessionCode: string, kind: AiCallKind) {
+    return this.runner.withinBudget(sessionCode, kind);
   }
 
-  /** Runs one agent job under a timeout. Errors are logged (with cost) and return null. */
-  private async run<T extends { usage: AiUsage }>(
+  private run<T extends { usage: AiUsage }>(
     sessionCode: string,
     kind: AiCallKind,
     timeoutMs: number,
     job: (signal: AbortSignal) => Promise<T>,
-  ): Promise<{ result: T; usage: AiUsage } | null> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const started = Date.now();
-    try {
-      const result = await job(controller.signal);
-      return { result, usage: result.usage };
-    } catch (err) {
-      const message = controller.signal.aborted
-        ? `Timed out after ${timeoutMs} ms`
-        : (err as Error).message;
-      this.warn(`[ai] ${sessionCode} ${kind} failed: ${message}`);
-      // A failed run can still have cost money; AgentRunError carries what it spent.
-      const usage =
-        err instanceof AgentRunError
-          ? err.usage
-          : { ...emptyUsage(this.opts.agent.model), durationMs: Date.now() - started };
-      await this.record(sessionCode, kind, 'error', usage, message);
-      return null;
-    } finally {
-      clearTimeout(timer);
-    }
+  ) {
+    return this.runner.run(sessionCode, kind, timeoutMs, job);
   }
 
-  private async record(
+  private record(
     sessionCode: string,
     kind: AiCallKind,
     status: AiCallStatus,
     usage: AiUsage | null,
     error: string | null,
   ) {
-    const u = usage ?? emptyUsage(this.opts.agent.model);
-    try {
-      await this.opts.log.record({
-        sessionCode,
-        kind,
-        status,
-        model: u.model,
-        costUsd: u.costUsd,
-        inputTokens: u.inputTokens,
-        outputTokens: u.outputTokens,
-        cacheReadTokens: u.cacheReadTokens,
-        cacheWriteTokens: u.cacheWriteTokens,
-        durationMs: u.durationMs,
-        numTurns: u.numTurns,
-        error,
-      });
-    } catch (err) {
-      // Logging must never break deck building.
-      this.warn(`[ai] could not log AI call: ${(err as Error).message}`);
-    }
+    return this.runner.record(sessionCode, kind, status, usage, error);
   }
 }
-
-const emptyUsage = (model: string): AiUsage => ({
-  model,
-  costUsd: 0,
-  inputTokens: 0,
-  outputTokens: 0,
-  cacheReadTokens: 0,
-  cacheWriteTokens: 0,
-  durationMs: 0,
-  numTurns: 0,
-});
 
 // Control characters and bidi overrides have no place in a card blurb.
 const UNSAFE = /[\p{Cc}‪-‮⁦-⁩]/gu;

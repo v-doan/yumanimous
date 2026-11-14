@@ -1,6 +1,13 @@
 import type { CSSProperties } from 'react';
-import { evaluateCard, matchRules, type CardOutcome, type SessionView } from '@yumanimous/shared';
+import {
+  canMakeShoppingList,
+  evaluateCard,
+  matchRules,
+  type CardOutcome,
+  type SessionView,
+} from '@yumanimous/shared';
 import { MemberList } from './MemberList';
+import { SuggestionPanel } from './SuggestionPanel';
 import ui from '../ui/ui.module.css';
 import styles from './Results.module.css';
 
@@ -20,7 +27,14 @@ const OUTCOME_CLASS: Record<CardOutcome, string> = {
  * Live leaderboard. Tallies use the same pure match rule as the server, so what
  * people see here always agrees with the match the server declared.
  */
-export function Results({ view, myId }: { view: SessionView; myId: string }) {
+interface ResultsProps {
+  view: SessionView;
+  myId: string;
+  onOpenList: (cardId: string) => void;
+  onAcceptSuggestion: () => void;
+}
+
+export function Results({ view, myId, onOpenList, onAcceptSuggestion }: ResultsProps) {
   const rule = matchRules[view.matchRule];
   const memberIds = view.members.map((m) => m.id);
   const matchOrder = new Map(view.matches.map((m, i) => [m.cardId, i]));
@@ -44,8 +58,13 @@ export function Results({ view, myId }: { view: SessionView; myId: string }) {
   let heading = 'Live results';
   if (view.finished) heading = view.matches.length > 0 ? 'Final results' : 'No match this time';
 
+  const noMatch = view.finished && view.matches.length === 0;
+
   return (
     <div className={ui.page}>
+      {noMatch && (
+        <SuggestionPanel view={view} onAccept={onAcceptSuggestion} onOpenList={onOpenList} />
+      )}
       <section className={ui.panel} aria-labelledby="results-title">
         <h2 id="results-title" className={ui.heading}>
           {heading}
@@ -66,6 +85,17 @@ export function Results({ view, myId }: { view: SessionView; myId: string }) {
                 {tally.likes.length}/{memberIds.length} yum
               </span>
               <span className={ui.badge}>{OUTCOME_LABEL[outcome]}</span>
+              {outcome === 'match' && canMakeShoppingList(view, card.id) && (
+                <button
+                  type="button"
+                  className={`${ui.textButton} ${styles.listButton}`}
+                  onClick={() => onOpenList(card.id)}
+                >
+                  {view.shoppingLists.some((l) => l.cardId === card.id)
+                    ? 'View shopping list'
+                    : 'Make shopping list'}
+                </button>
+              )}
               <span
                 className={styles.bar}
                 style={

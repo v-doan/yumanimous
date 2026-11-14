@@ -49,3 +49,9 @@
 .no-match {
   opacity: 0.6;
 }
+
+.list-button {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding-left: 0;
+}

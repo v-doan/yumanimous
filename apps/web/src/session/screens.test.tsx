@@ -44,7 +44,7 @@ describe('Results', () => {
       ],
       matches: [{ cardId: 'stew', matchedAt: 1 }],
     });
-    render(<Results view={view} myId="vy" />);
+    render(<Results view={view} myId="vy" onOpenList={() => {}} onAcceptSuggestion={() => {}} />);
 
     const items = within(screen.getByRole('list', { name: 'Leaderboard' })).getAllByRole(
       'listitem',
@@ -65,7 +65,7 @@ describe('Results', () => {
       members: [member('vy', { swipedCount: 3 })],
       finished: true,
     });
-    render(<Results view={view} myId="vy" />);
+    render(<Results view={view} myId="vy" onOpenList={() => {}} onAcceptSuggestion={() => {}} />);
     expect(screen.getByRole('heading', { name: 'No match this time' })).toBeInTheDocument();
   });
 });
@@ -85,6 +85,7 @@ describe('MatchOverlay', () => {
         view={view}
         onKeepSwiping={onKeepSwiping}
         onSeeResults={() => {}}
+        onShoppingList={() => {}}
       />,
     );
     expect(screen.getByRole('dialog', { name: 'It’s a match!' })).toBeInTheDocument();
@@ -106,7 +107,13 @@ describe('MatchOverlay', () => {
       ],
     });
     render(
-      <MatchOverlay card={deck[0]!} view={view} onKeepSwiping={() => {}} onSeeResults={() => {}} />,
+      <MatchOverlay
+        card={deck[0]!}
+        view={view}
+        onKeepSwiping={() => {}}
+        onSeeResults={() => {}}
+        onShoppingList={() => {}}
+      />,
     );
     expect(screen.getByText('Yum from Vy, Kim')).toBeInTheDocument();
   });

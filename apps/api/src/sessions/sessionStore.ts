@@ -6,6 +6,8 @@ import type {
   MatchRuleId,
   SessionMode,
   SessionStatus,
+  ShoppingList,
+  Suggestion,
   Swipe,
 } from '@yumanimous/shared';
 
@@ -37,6 +39,12 @@ export interface StoredSession {
   members: StoredMember[];
   swipes: Swipe[];
   matches: Match[];
+  /** Phase 7: one per matched (or accepted) recipe. Cleared with the deck. */
+  shoppingLists: ShoppingList[];
+  /** The mediator's compromise when nothing matched; null otherwise. */
+  suggestion: Suggestion | null;
+  /** When the mediator was started for this deck (it runs once); null if not yet. */
+  mediatedAt: number | null;
   updatedAt: number;
 }
 

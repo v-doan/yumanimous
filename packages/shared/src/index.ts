@@ -1,5 +1,6 @@
 export * from './card.js';
 export * from './events.js';
+export * from './followUps.js';
 export * from './food.js';
 export * from './matchRules.js';
 export * from './member.js';

@@ -28,6 +28,10 @@ function mockSession(overrides: Partial<ReturnType<typeof useSession>> = {}) {
     start: async () => {},
     setPreferences: async () => true,
     rebuild: async () => {},
+    makeList: async () => {},
+    toggleLine: async () => {},
+    setServings: async () => {},
+    acceptSuggestion: async () => {},
     leave,
     dismissMatch: () => {},
     clearError: () => {},
@@ -80,5 +84,59 @@ describe('Leave', () => {
     mockSession({ ended: 'removed' });
     renderRoom();
     expect(screen.getByRole('heading', { name: 'You left the session' })).toBeInTheDocument();
+  });
+});
+
+describe('Shopping list', () => {
+  const recipe = { id: 'spoonacular:1', title: 'Garlic Noodles', tags: [], blurb: 'Yum.' };
+
+  it('asks how many are eating (default: everyone here), then makes and opens the list', async () => {
+    const makeList = vi.fn(async () => {});
+    mockSession({
+      view: sessionView({
+        deck: [recipe],
+        swipes: [
+          { cardId: recipe.id, memberId: 'vy', direction: 'like' },
+          { cardId: recipe.id, memberId: 'sam', direction: 'like' },
+        ],
+        matches: [{ cardId: recipe.id, matchedAt: 1 }],
+        finished: true,
+      }),
+      makeList,
+    });
+    renderRoom();
+    await userEvent.click(screen.getByRole('button', { name: 'Make shopping list' }));
+    const dialog = screen.getByRole('dialog', { name: 'How many are eating?' });
+    expect(within(dialog).getByText('2 servings')).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Make list' }));
+    expect(makeList).toHaveBeenCalledWith(recipe.id, 2);
+  });
+
+  it('opens an existing list straight away', async () => {
+    mockSession({
+      view: sessionView({
+        deck: [recipe],
+        matches: [{ cardId: recipe.id, matchedAt: 1 }],
+        members: [],
+        shoppingLists: [
+          {
+            cardId: recipe.id,
+            title: recipe.title,
+            servings: 2,
+            recipeServings: 2,
+            status: 'building',
+            source: null,
+            createdBy: 'vy',
+            ingredients: [],
+            lines: [],
+            error: null,
+          },
+        ],
+      }),
+    });
+    renderRoom();
+    await userEvent.click(screen.getByRole('button', { name: 'Results' }));
+    await userEvent.click(screen.getByRole('button', { name: 'View shopping list' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Making the list…');
   });
 });

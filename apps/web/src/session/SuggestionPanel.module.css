@@ -1,0 +1,17 @@
+.panel {
+  border-color: var(--color-green);
+  border-width: 2px;
+}
+
+.pick {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: var(--text-lg);
+  overflow-wrap: anywhere;
+}
+
+.reason {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

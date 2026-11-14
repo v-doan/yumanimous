@@ -2,7 +2,10 @@ import type { Server as HttpServer } from 'node:http';
 import { Server, type Socket } from 'socket.io';
 import { z } from 'zod';
 import {
+  CreateShoppingListSchema,
   MemberPreferencesSchema,
+  SetShoppingServingsSchema,
+  ToggleShoppingLineSchema,
   SocketAuthSchema,
   SwipeInputSchema,
   type Ack,
@@ -98,6 +101,28 @@ export function attachRealtime(
     socket.on(
       'session:leave',
       handle(() => service.removeMember(code, memberId)),
+    );
+    socket.on(
+      'shopping:create',
+      handle(async (input: unknown) => {
+        await service.createShoppingList(code, memberId, CreateShoppingListSchema.parse(input));
+      }),
+    );
+    socket.on(
+      'shopping:toggle',
+      handle(async (input: unknown) => {
+        await service.toggleShoppingLine(code, memberId, ToggleShoppingLineSchema.parse(input));
+      }),
+    );
+    socket.on(
+      'shopping:servings',
+      handle(async (input: unknown) => {
+        await service.setShoppingServings(code, memberId, SetShoppingServingsSchema.parse(input));
+      }),
+    );
+    socket.on(
+      'suggestion:accept',
+      handle(() => service.acceptSuggestion(code, memberId)),
     );
 
     socket.on('disconnect', () => {

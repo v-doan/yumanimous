@@ -1,6 +1,6 @@
 import type pg from 'pg';
 
-export type AiCallKind = 'deck' | 'rerank' | 'smoke';
+export type AiCallKind = 'deck' | 'rerank' | 'smoke' | 'shopping' | 'mediator';
 export type AiCallStatus = 'ok' | 'fallback' | 'error' | 'skipped';
 
 /** One AI run, as logged. CLAUDE.md: log the cost and latency of every AI call. */

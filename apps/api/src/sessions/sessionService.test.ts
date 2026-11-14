@@ -6,6 +6,8 @@ import {
   type MemberPreferences,
 } from '@yumanimous/shared';
 import { DeckError, type DeckSource } from '../deck/deckSource.js';
+import { FollowUpError, type FollowUps } from '../followUps/followUps.js';
+import { buildLines } from '../followUps/shoppingList.js';
 import { SessionService, type SessionEvent } from './sessionService.js';
 import { createTestDatabase, databaseUrl } from '@yumanimous/db/testing';
 import { PostgresSessionStore } from './postgresSessionStore.js';
@@ -26,6 +28,37 @@ const deckSource: DeckSource = {
     deckRequests.push(group);
     if (nextDeck instanceof Error) throw nextDeck;
     return nextDeck;
+  },
+};
+
+// Phase 7: recipe cards (only those have ingredients), and fake follow-ups.
+const recipeDeck: Card[] = [1, 2, 3].map((n) => ({
+  id: `spoonacular:${n}`,
+  title: `Recipe ${n}`,
+  tags: [],
+  blurb: 'Tasty.',
+}));
+const garlic = [{ name: 'garlic', amount: 2, unit: 'cloves', aisle: 'Produce' }];
+let listCalls = 0;
+let mediateCalls = 0;
+let listGate: Promise<void> = Promise.resolve();
+let listError: Error | null = null;
+const followUps: FollowUps = {
+  shoppingList: async ({ servings }) => {
+    listCalls++;
+    await listGate;
+    if (listError) throw listError;
+    const plan = [{ name: 'Garlic', aisle: 'Produce', covers: [0], likelyAtHome: false }];
+    return {
+      recipeServings: 2,
+      ingredients: garlic,
+      lines: buildLines(plan, garlic, servings, 2),
+      source: 'ai',
+    };
+  },
+  mediate: async ({ contenders }) => {
+    mediateCalls++;
+    return { cardId: contenders[0]!.cardId, reason: 'It got the most yums.', source: 'fallback' };
   },
 };
 
@@ -610,6 +643,200 @@ describe.each(['memory', 'postgres'] as const)('SessionService with %s store', (
         }
         await new Promise((r) => setTimeout(r, 20));
         expect((await svc.view(host.code)).deck.map((c) => c.id)).toEqual(big.map((c) => c.id));
+      });
+    });
+
+    describe('after the decision (Phase 7)', () => {
+      let svc: SessionService;
+
+      beforeEach(() => {
+        nextDeck = recipeDeck;
+        listCalls = 0;
+        mediateCalls = 0;
+        listGate = Promise.resolve();
+        listError = null;
+        svc = new SessionService({ store, deckSource, followUps, now: () => clock });
+        svc.subscribe((e) => events.push(e));
+      });
+
+      async function started(guests: string[]) {
+        const host = await svc.create({ hostName: 'Host', matchRule: 'everyone' });
+        const others = [];
+        for (const name of guests) others.push(await svc.join(host.code, name));
+        await svc.start(host.code, host.memberId);
+        return { code: host.code, ids: [host.memberId, ...others.map((o) => o.memberId)] };
+      }
+
+      async function matchFirstCard() {
+        const s = await started(['Sam']);
+        for (const id of s.ids) {
+          await svc.swipe(s.code, id, { cardId: 'spoonacular:1', direction: 'like' });
+        }
+        return s;
+      }
+
+      async function finishWithoutMatch() {
+        const s = await started(['Sam']);
+        for (const card of recipeDeck) {
+          await svc.swipe(s.code, s.ids[0]!, { cardId: card.id, direction: 'skip' });
+        }
+        await svc.swipe(s.code, s.ids[1]!, { cardId: 'spoonacular:1', direction: 'skip' });
+        await svc.swipe(s.code, s.ids[1]!, { cardId: 'spoonacular:2', direction: 'like' });
+        await svc.swipe(s.code, s.ids[1]!, { cardId: 'spoonacular:3', direction: 'skip' });
+        return s;
+      }
+
+      it('makes one list per matched card, even when two people tap at once', async () => {
+        const { code, ids } = await matchFirstCard();
+        let open!: () => void;
+        listGate = new Promise((resolve) => (open = resolve));
+        const first = svc.createShoppingList(code, ids[0]!, {
+          cardId: 'spoonacular:1',
+          servings: 4,
+        });
+        const second = svc.createShoppingList(code, ids[1]!, {
+          cardId: 'spoonacular:1',
+          servings: 4,
+        });
+        await vi.waitFor(async () =>
+          expect((await svc.view(code)).shoppingLists[0]?.status).toBe('building'),
+        );
+        open();
+        await Promise.all([first, second]);
+
+        expect(listCalls).toBe(1);
+        const [list] = (await svc.view(code)).shoppingLists;
+        expect(list).toMatchObject({
+          status: 'ready',
+          source: 'ai',
+          servings: 4,
+          createdBy: ids[0],
+          title: 'Recipe 1',
+        });
+        expect(list!.lines[0]).toMatchObject({ name: 'Garlic', quantity: '4 cloves' });
+
+        // Asking again for a finished list changes nothing and costs nothing.
+        await svc.createShoppingList(code, ids[1]!, { cardId: 'spoonacular:1', servings: 2 });
+        expect(listCalls).toBe(1);
+      });
+
+      it('only makes lists for matched cards, and only for members', async () => {
+        const { code, ids } = await matchFirstCard();
+        await expect(
+          svc.createShoppingList(code, ids[0]!, { cardId: 'spoonacular:2', servings: 2 }),
+        ).rejects.toMatchObject({ code: 'not_allowed' });
+        await expect(
+          svc.createShoppingList(code, 'stranger', { cardId: 'spoonacular:1', servings: 2 }),
+        ).rejects.toMatchObject({ code: 'not_member' });
+        expect(listCalls).toBe(0);
+      });
+
+      it('shares "we have it" ticks and rescales without another run', async () => {
+        const { code, ids } = await matchFirstCard();
+        await svc.createShoppingList(code, ids[0]!, { cardId: 'spoonacular:1', servings: 2 });
+        await svc.toggleShoppingLine(code, ids[1]!, {
+          cardId: 'spoonacular:1',
+          lineId: 'l1',
+          have: true,
+        });
+        await svc.setShoppingServings(code, ids[1]!, { cardId: 'spoonacular:1', servings: 6 });
+
+        const [list] = (await svc.view(code)).shoppingLists;
+        expect(list!.servings).toBe(6);
+        expect(list!.lines[0]).toMatchObject({ quantity: '6 cloves', have: true });
+        expect(listCalls).toBe(1);
+        await expect(
+          svc.toggleShoppingLine(code, ids[0]!, {
+            cardId: 'spoonacular:1',
+            lineId: 'l9',
+            have: true,
+          }),
+        ).rejects.toMatchObject({ code: 'no_list' });
+      });
+
+      it('shows a failed list with its reason, and lets anyone retry', async () => {
+        const { code, ids } = await matchFirstCard();
+        listError = new FollowUpError('Recipe API daily quota is used up; try again tomorrow');
+        await svc.createShoppingList(code, ids[0]!, { cardId: 'spoonacular:1', servings: 2 });
+        expect((await svc.view(code)).shoppingLists[0]).toMatchObject({
+          status: 'failed',
+          error: 'Recipe API daily quota is used up; try again tomorrow',
+        });
+
+        listError = null;
+        await svc.createShoppingList(code, ids[1]!, { cardId: 'spoonacular:1', servings: 2 });
+        expect((await svc.view(code)).shoppingLists[0]?.status).toBe('ready');
+      });
+
+      it('runs the mediator once when everyone finished and nothing matched', async () => {
+        const { code, ids } = await finishWithoutMatch();
+        // The last swipe's broadcast already says a compromise is on its way.
+        const lastState = events.filter((e) => e.type === 'changed').at(-1);
+        expect(lastState?.type === 'changed' && lastState.view.mediating).toBe(true);
+
+        await svc.settled();
+        const view = await svc.view(code);
+        expect(view.suggestion).toEqual({
+          cardId: 'spoonacular:2',
+          reason: 'It got the most yums.',
+          source: 'fallback',
+          acceptedBy: null,
+        });
+        expect(view.mediating).toBe(false);
+
+        // More changes to the finished session don't run it again.
+        await svc.setConnected(code, ids[0]!, true);
+        await svc.setConnected(code, ids[0]!, false);
+        await svc.settled();
+        expect(mediateCalls).toBe(1);
+      });
+
+      it('does not mediate while people are still swiping, or after a match', async () => {
+        const { code } = await matchFirstCard();
+        await svc.settled();
+        expect(mediateCalls).toBe(0);
+        expect((await svc.view(code)).suggestion).toBeNull();
+      });
+
+      it('"Go with it" accepts the compromise, which can then get a shopping list', async () => {
+        const { code, ids } = await finishWithoutMatch();
+        await svc.settled();
+        await expect(
+          svc.createShoppingList(code, ids[0]!, { cardId: 'spoonacular:2', servings: 2 }),
+        ).rejects.toMatchObject({ code: 'not_allowed' });
+
+        await svc.acceptSuggestion(code, ids[1]!);
+        expect((await svc.view(code)).suggestion?.acceptedBy).toBe(ids[1]);
+        await svc.createShoppingList(code, ids[0]!, { cardId: 'spoonacular:2', servings: 2 });
+        expect((await svc.view(code)).shoppingLists[0]?.status).toBe('ready');
+      });
+
+      it('a rebuild clears lists and the compromise, and may mediate again', async () => {
+        const { code, ids } = await finishWithoutMatch();
+        await svc.settled();
+        await svc.acceptSuggestion(code, ids[0]!);
+        await svc.createShoppingList(code, ids[0]!, { cardId: 'spoonacular:2', servings: 2 });
+
+        await svc.rebuildDeck(code, ids[0]!);
+        const view = await svc.view(code);
+        expect(view.shoppingLists).toEqual([]);
+        expect(view.suggestion).toBeNull();
+        expect(view.mediating).toBe(false);
+
+        for (const id of ids) {
+          for (const card of recipeDeck) {
+            await svc.swipe(code, id, { cardId: card.id, direction: 'skip' });
+          }
+        }
+        await svc.settled();
+        expect(mediateCalls).toBe(2);
+      });
+
+      it('rejects "Go with it" when there is nothing to accept', async () => {
+        const { code, ids } = await matchFirstCard();
+        await expect(svc.acceptSuggestion(code, ids[0]!)).rejects.toMatchObject({
+          code: 'not_allowed',
+        });
       });
     });
 

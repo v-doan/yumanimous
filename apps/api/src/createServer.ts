@@ -16,7 +16,11 @@ import { staticRecipeDeck, type DeckSource } from './deck/deckSource.js';
 import { RecipeDeckSource } from './deck/recipeDeckSource.js';
 import { createApp } from './http/app.js';
 import { attachRealtime } from './realtime/realtime.js';
-import { SpoonacularClient } from '@yumanimous/mcp-recipes';
+import { createRecipesServer, SpoonacularClient } from '@yumanimous/mcp-recipes';
+import { AiRunner } from './ai/aiRunner.js';
+import { ClaudeFollowUpAgent } from './ai/followUpAgents.js';
+import { FollowUpService, type FollowUps } from './followUps/followUps.js';
+import { mcpRecipeDetails } from './followUps/recipeDetails.js';
 import { PostgresSessionStore } from './sessions/postgresSessionStore.js';
 import { InMemorySessionStore, type SessionStore } from './sessions/sessionStore.js';
 import { SessionService } from './sessions/sessionService.js';
@@ -42,6 +46,7 @@ export interface ServerOptions {
   /** Test overrides. */
   store?: SessionStore;
   deckSource?: DeckSource;
+  followUps?: FollowUps;
   now?: () => number;
 }
 
@@ -67,9 +72,13 @@ export async function createServer({
 
   const store =
     overrides.store ?? (pool ? new PostgresSessionStore(pool) : new InMemorySessionStore());
+  const spoonacular = spoonacularApiKey
+    ? new SpoonacularClient({ apiKey: spoonacularApiKey })
+    : null;
+  const apiCache = pool ? new PostgresApiCache(pool) : new InMemoryApiCache();
   const recipeDeck = new RecipeDeckSource({
-    client: spoonacularApiKey ? new SpoonacularClient({ apiKey: spoonacularApiKey }) : null,
-    cache: pool ? new PostgresApiCache(pool) : new InMemoryApiCache(),
+    client: spoonacular,
+    cache: apiCache,
     catalog: pool ? new PostgresCardCatalog(pool) : noopCardCatalog,
     fallback: staticRecipeDeck,
   });
@@ -80,6 +89,7 @@ export async function createServer({
   let budget: BudgetGuard | null = null;
   let readOnlyPool: ReturnType<typeof createPool> | null = null;
   let aiDeck: AiDeckSource | null = null;
+  let followUpAi: ConstructorParameters<typeof FollowUpService>[0]['ai'];
   if (ai && pool && databaseUrl) {
     aiLog = new PostgresAiCallLog(pool);
     budget = new BudgetGuard(aiLog, ai.monthlyBudgetUsd);
@@ -87,6 +97,13 @@ export async function createServer({
     // read-only, exactly as Claude Desktop / Claude Code do.
     const sessionPool = createPool(databaseUrl, { readOnly: true });
     readOnlyPool = sessionPool;
+    followUpAi = {
+      agent: new ClaudeFollowUpAgent({
+        model: ai.model,
+        createSessionServer: () => createSessionServer({ pool: sessionPool }),
+      }),
+      runner: new AiRunner({ log: aiLog, budget, model: ai.model }),
+    };
     aiDeck = new AiDeckSource({
       base: recipeDeck,
       agent: new ClaudeDeckAgent({
@@ -101,7 +118,19 @@ export async function createServer({
   }
   const deckSource = overrides.deckSource ?? aiDeck ?? recipeDeck;
 
-  const service = new SessionService({ store, deckSource, ...(now ? { now } : {}) });
+  // Phase 7. Recipes are read through mcp-recipes (in-process) with the same cache
+  // as the deck, so a recipe already looked up costs nothing. Without AI, lists and
+  // compromises are made by code alone.
+  const followUps =
+    overrides.followUps ??
+    new FollowUpService({
+      recipeDetails: mcpRecipeDetails(() =>
+        createRecipesServer({ client: spoonacular, cache: apiCache }),
+      ),
+      ai: followUpAi,
+    });
+
+  const service = new SessionService({ store, deckSource, followUps, ...(now ? { now } : {}) });
   // After a restart nobody has a socket yet. Phones reconnect within seconds and
   // flip back online; the presence sweep removes anyone who doesn't come back.
   await service.markAllOffline();
@@ -136,6 +165,7 @@ export async function createServer({
     close: async () => {
       for (const timer of timers) clearInterval(timer);
       await realtime.close(); // Also closes the HTTP server.
+      await service.settled(); // A mediator run may still be writing.
       await store.close();
       await readOnlyPool?.end();
       await pool?.end();

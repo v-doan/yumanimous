@@ -242,7 +242,7 @@ function toDetails(recipe: SpoonacularRecipeDetails): RecipeDetails {
       aisle: i.aisle ?? null,
     })),
     // Recipes can have several instruction groups ("For the sauce"); number them
-    // continuously so the sous-chef can split one list of steps.
+    // continuously so the recipe reads as one list of steps.
     steps: recipe.analyzedInstructions
       .flatMap((group) => group.steps)
       .map((step, index) => ({

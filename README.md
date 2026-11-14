@@ -3,10 +3,11 @@
 Swipe-to-decide for groups: everyone swipes on a shared deck, and it's a match when the group is
 _yumanimous_. Zero install: join from a link in the group chat.
 
-> Work in progress. Phase 6: a Claude orchestrator with scout, curator and writer subagents builds
-> each deck and re-ranks it from the group's swipes, for about 3¢ a session, on a monthly budget.
-> Earlier phases: live sessions over WebSockets, Postgres, a cached recipe API, MCP servers, and food
-> rules that bind the whole group.
+> Work in progress. Phase 7: after a match, a sous-chef agent turns the recipe into one shared
+> shopping list; when nothing matches, a mediator agent suggests the fairest compromise. Earlier
+> phases: an orchestrator with scout, curator and writer subagents that builds each deck (under 1¢),
+> live sessions over WebSockets, Postgres, a cached recipe API, MCP servers, and food rules that bind
+> the whole group.
 
 ## Quick start
 
@@ -149,6 +150,45 @@ Two dev scripts: `npm run agent:smoke -w @yumanimous/api` (one tiny real call, u
 new machine) and `npm run deck:bench -w @yumanimous/api -- [--trace]` (one real build for a fixed
 test group in a throwaway session: time per stage, cost, and quality checks).
 
+## After the decision
+
+**Shopping list (sous-chef).** On a match, anyone can tap _Shopping list_, say how many are eating
+(it starts at the number of people in the session), and the whole group gets one live list: "we have
+it" ticks show on everyone's phone, the servings can be changed later, and _Copy list_ puts what's
+left to buy on the clipboard for the group chat.
+
+1. The recipe comes from `get_recipe` on the Phase 4 `mcp-recipes` server, connected in-process
+   through an MCP client, with the same Postgres cache (30 days), so a recipe costs at most one API
+   call.
+2. **Code scales every amount** ([`scale.ts`](apps/api/src/followUps/scale.ts)): summed per unit
+   before rounding (3 × ⅓ cup is 1 cup), rounded for a shop (whole onions, quarter cups, grams to
+   the nearest 5), never converted between units ("1 cup + 2 tbsp").
+3. The sous-chef (one agent, `claude-haiku-5-5`) only groups and names: it merges the garlic used
+   twice into one line, names it for a shopper, picks an aisle, and marks salt, oil and water as
+   probably at home. It hands in lines through `submit_shopping_list`, where each line lists the
+   ingredients it covers. **A list that drops, repeats or invents an ingredient is refused** with the
+   reason, so the model can fix it (3 tries). The quantity on each line is computed by code from
+   what it covers: the model never writes a number.
+4. Over budget, a failure, or no valid list: the plain list (one line per ingredient, by the recipe
+   API's aisle) is used instead. Changing servings later is arithmetic only, with no AI call.
+
+**Mediator.** When everyone has finished and nothing matched, a mediator agent reads the vote tally
+and everyone's food preferences through `mcp-session` and suggests one card with a short reason.
+Anyone can tap _Go with it_, and the shopping list follows. The code checks the pick
+([`mediator.ts`](apps/api/src/followUps/mediator.ts)): it must be in the deck and **at most one yum
+behind the top card**, so the mediator can break a tie or favour a near-miss but never overrule the
+votes, and the reason is cleaned and capped at 280 characters. Otherwise the top card is suggested,
+with a plain reason. It runs once per deck, claimed in the same transaction as the swipe (or leave)
+that finished the session, in the background.
+
+| Run              | Cost (measured) | Time  |
+| ---------------- | --------------- | ----- |
+| Shopping list    | ~$0.0008        | ~4 s  |
+| Mediator         | ~$0.0011        | ~4 s  |
+| Deck (for scale) | ~$0.005–0.007   | ~25 s |
+
+Both are logged in `ai_calls` and shown on `/debug`, under the same monthly budget.
+
 ## Persistence
 
 Postgres holds sessions, members, swipes and matches (schema:
@@ -184,7 +224,7 @@ transport-agnostic `createXServer()` plus a small `stdio.ts` launcher.
 | Server               | Tool                     | What it's for                                                                                            |
 | -------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------- |
 | `yumanimous-recipes` | `search_recipes`         | Filtered search: query, cuisine, `diets` (AND), `intolerances` (excluded), max time, type, 1–20 results  |
-|                      | `get_recipe`             | Ingredients with amounts and supermarket aisle, numbered steps (for the Phase 7 cook plan)               |
+|                      | `get_recipe`             | Ingredients with amounts and supermarket aisle, numbered steps (the shopping list reads it)              |
 | `yumanimous-session` | `get_session`            | Match rule, status, members, who's online, swipe progress, matches                                       |
 |                      | `get_swipe_history`      | Each member's yums and skips with card titles and tags (for re-ranking)                                  |
 |                      | `get_vote_tally`         | Per-card yums, skips and outcome under the session's rule, best first (for the no-match mediator)        |
@@ -243,7 +283,7 @@ exactly as `.mcp.json` describes, lists its tools and calls a few.
 
 | Path                   | What                                                                            |
 | ---------------------- | ------------------------------------------------------------------------------- |
-| `apps/web`             | React + Vite app: home, join, lobby, swipe deck, match screen, results          |
+| `apps/web`             | React + Vite app: home, join, lobby, swipe deck, match screen, results, list    |
 | `apps/api`             | Express + Socket.io + Postgres: sessions, presence, matches, recipes, AI agents |
 | `packages/shared`      | Zod schemas, socket event types and pure match rules, used by both              |
 | `packages/db`          | Postgres schema (SQL migrations), pools, API cache, test database helpers       |

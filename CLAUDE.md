@@ -9,7 +9,7 @@ phone browser, type a name, and start swiping. No account, no app store.
 
 Modes (pluggable deck sources):
 - **Cook in**: recipe cards. On a match, AI builds a combined shopping list (minus
-  what's already at home) and splits the cooking steps across the group.
+  what's already at home). No splitting of cooking steps across members (decided against).
 - **Eat out**: nearby restaurant cards. On no match, AI suggests a compromise.
 - Future: travel voting (destinations / activities) as another deck source.
 
@@ -19,7 +19,7 @@ clarity, and a clean README matter more than feature count.
 ## What makes it different
 - Zero-install web join by link (the #1 reason similar apps die is that everyone must install them)
 - Group memory: saved groups remember past sessions, vetoes and recent picks, and the AI uses them
-- Solves what happens after the decision: cook plan (cook in) or a shareable summary card (eat out)
+- Solves what happens after the decision: shopping list (cook in) or a shareable summary card (eat out)
 
 ## Sessions and groups
 - A session has N members (2 to ~10), never "person A / person B". Model it that way from day 1
@@ -65,7 +65,7 @@ clarity, and a clean README matter more than feature count.
   - **curator**: filters + ranks against EVERY member's preferences and the group's history
   - **writer**: short, fun card blurbs
   - **mediator**: on no match, picks the best compromise from the vote counts and explains why
-  - **sous-chef** (cook-in): shopping list + step split across all members
+  - **sous-chef** (cook-in): combined shopping list for the matched recipe (minus what's at home)
 - Re-rank remaining deck after ~10 swipes per member using swipe history from `mcp-session`
 
 ## Safety / quality rules
@@ -88,7 +88,7 @@ clarity, and a clean README matter more than feature count.
 4. MCP servers: `mcp-recipes`, `mcp-session` (test in Claude Desktop / Claude Code)
 5. Preference intake (natural language -> Zod-validated filters), merged across members
 6. Orchestrator + subagents build the deck; re-rank after swipes
-7. Match follow-ups (sous-chef cook plan, eat-out summary card) + no-match mediator
+7. Match follow-ups (sous-chef shopping list, eat-out summary card) + no-match mediator
 8. Group memory: saved groups, history in `mcp-session`, curator uses it
 9. Deploy + PWA manifest, README with architecture diagram, demo video (several phones voting), eval set
 10. If time: eat-out mode (`mcp-places`), 2-minute round timer

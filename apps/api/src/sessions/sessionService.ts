@@ -1,20 +1,27 @@
 import {
   MAX_MEMBERS,
+  canMakeShoppingList,
   matchRules,
   evaluateCard,
   mergePreferences,
   uncoveredRules,
   type AttributedRule,
   type Card,
+  type CreateShoppingList,
   type HardFilters,
   type MatchRuleId,
   type MemberPreferences,
   type Membership,
   type SessionPreview,
   type SessionView,
+  type ShoppingList,
   type SwipeInput,
+  type ToggleShoppingLine,
 } from '@yumanimous/shared';
 import { DeckError, type DeckProgressStage, type DeckSource } from '../deck/deckSource.js';
+import { FollowUpError, type FollowUps } from '../followUps/followUps.js';
+import { contenders } from '../followUps/mediator.js';
+import { rescaleLines } from '../followUps/shoppingList.js';
 import { applyRerank, shouldRerank, unswipedByAnyone } from './rerank.js';
 import {
   generateMemberId,
@@ -34,7 +41,9 @@ export type SessionErrorCode =
   | 'not_started'
   | 'already_started'
   | 'unknown_card'
-  | 'deck_unavailable';
+  | 'deck_unavailable'
+  | 'not_allowed'
+  | 'no_list';
 
 /** An expected, user-facing failure. Its message is safe to show to clients. */
 export class SessionError extends Error {
@@ -59,9 +68,17 @@ type Listener = (event: SessionEvent) => void;
 
 type DeckJobKind = 'start' | 'rebuild';
 
+/**
+ * A mediator claim older than this with no suggestion is assumed lost (e.g. the API
+ * restarted mid-run), and the next change to the session starts it again.
+ */
+const MEDIATION_STALE_MS = 2 * 60_000;
+
 export interface SessionServiceOptions {
   store: SessionStore;
   deckSource: DeckSource;
+  /** Phase 7: shopping lists and the no-match mediator. Off when omitted. */
+  followUps?: FollowUps;
   /** Injected so tests can control time. */
   now?: () => number;
 }
@@ -78,10 +95,16 @@ export class SessionService {
   private readonly locks = new Map<string, Promise<unknown>>();
   /** The deck build running for each session, if any (see deckJob). */
   private readonly deckJobs = new Map<string, { kind: DeckJobKind; promise: Promise<void> }>();
+  private readonly followUps: FollowUps | null;
+  /** Shopping lists being made, by `${code}:${cardId}` (one run per list). */
+  private readonly listJobs = new Map<string, Promise<void>>();
+  /** Background mediator runs, so tests (and shutdown) can wait for them. */
+  private readonly background = new Set<Promise<void>>();
 
-  constructor({ store, deckSource, now = Date.now }: SessionServiceOptions) {
+  constructor({ store, deckSource, followUps, now = Date.now }: SessionServiceOptions) {
     this.store = store;
     this.deckSource = deckSource;
+    this.followUps = followUps ?? null;
     this.now = now;
   }
 
@@ -109,6 +132,9 @@ export class SessionService {
         members: [host],
         swipes: [],
         matches: [],
+        shoppingLists: [],
+        suggestion: null,
+        mediatedAt: null,
         updatedAt: this.now(),
       };
       if (await this.store.create(session)) {
@@ -255,6 +281,10 @@ export class SessionService {
         current.swipes = [];
         current.matches = [];
         current.rerankedAt = null; // A new deck may be re-ranked once too.
+        // Lists and the compromise were for the old deck.
+        current.shoppingLists = [];
+        current.suggestion = null;
+        current.mediatedAt = null;
       }
       current.deck = deck;
       current.deckFilters = filters;
@@ -335,6 +365,170 @@ export class SessionService {
       { ifExists: true },
     );
     if (applied) this.emit({ type: 'deck-progress', code, stage: 'reranked' });
+  }
+
+  /**
+   * Anyone, for a matched recipe (or the accepted compromise): make its shopping list
+   * for `servings`. One list per card: a second request while it's being made joins
+   * that run, and a finished list is left as it is (use setShoppingServings).
+   * Resolves when the list is ready or has failed; everyone sees the progress live.
+   */
+  async createShoppingList(
+    code: string,
+    memberId: string,
+    { cardId, servings }: CreateShoppingList,
+  ): Promise<void> {
+    const followUps = this.followUps;
+    if (!followUps) throw new SessionError('not_allowed', 'Shopping lists are not available');
+    const key = `${code}:${cardId}`;
+
+    // Check and claim under one short lock, like deckJob, so two taps start one run.
+    const { job } = await this.withLock(`list-job:${key}`, async () => {
+      const running = this.listJobs.get(key);
+      if (running) {
+        requireMember(await this.require(code), memberId);
+        return { job: running };
+      }
+      const card = await this.update(code, (session) => {
+        requireMember(session, memberId);
+        if (!canMakeShoppingList(toView(session), cardId)) {
+          throw new SessionError('not_allowed', 'A list can only be made for a matched recipe');
+        }
+        const existing = session.shoppingLists.find((l) => l.cardId === cardId);
+        // A failed list can be retried; one stuck "building" after a restart too.
+        if (existing?.status === 'ready') return false;
+        const card = session.deck.find((c) => c.id === cardId)!;
+        const placeholder: ShoppingList = {
+          cardId,
+          title: card.title,
+          servings,
+          recipeServings: null,
+          status: 'building',
+          source: null,
+          createdBy: memberId,
+          ingredients: [],
+          lines: [],
+          error: null,
+        };
+        session.shoppingLists = [
+          ...session.shoppingLists.filter((l) => l.cardId !== cardId),
+          placeholder,
+        ];
+        return card;
+      });
+      if (card === false) return { job: Promise.resolve() };
+
+      const promise = this.buildList(code, card, servings, followUps).finally(() =>
+        this.listJobs.delete(key),
+      );
+      this.listJobs.set(key, promise);
+      return { job: promise }; // Wrapped: see deckJob.
+    });
+    return job;
+  }
+
+  /** Runs outside the session lock: it may call the recipe API and the AI. */
+  private async buildList(code: string, card: Card, servings: number, followUps: FollowUps) {
+    let patch: Partial<ShoppingList>;
+    try {
+      const result = await followUps.shoppingList({ sessionCode: code, card, servings });
+      patch = { ...result, status: 'ready', error: null };
+    } catch (err) {
+      if (!(err instanceof FollowUpError)) console.error('[shopping]', err);
+      const error =
+        err instanceof FollowUpError ? err.message : 'Something went wrong making the list';
+      patch = { status: 'failed', error: error.slice(0, 200) };
+    }
+    await this.update(
+      code,
+      (session) => {
+        // The deck was rebuilt meanwhile: this list belongs to the old one.
+        const list = session.shoppingLists.find((l) => l.cardId === card.id);
+        if (!list || list.status !== 'building') return false;
+        Object.assign(list, patch);
+        return true;
+      },
+      { ifExists: true },
+    );
+  }
+
+  /** "We have it" on one line, for everyone. */
+  async toggleShoppingLine(
+    code: string,
+    memberId: string,
+    { cardId, lineId, have }: ToggleShoppingLine,
+  ): Promise<void> {
+    await this.update(code, (session) => {
+      requireMember(session, memberId);
+      const line = readyList(session, cardId).lines.find((l) => l.id === lineId);
+      if (!line) throw new SessionError('no_list', 'That item is not on the list');
+      if (line.have === have) return false;
+      line.have = have;
+      return true;
+    });
+  }
+
+  /** Rescales a finished list. Arithmetic only: no AI call, no recipe lookup. */
+  async setShoppingServings(
+    code: string,
+    memberId: string,
+    { cardId, servings }: CreateShoppingList,
+  ): Promise<void> {
+    await this.update(code, (session) => {
+      requireMember(session, memberId);
+      const list = readyList(session, cardId);
+      if (list.servings === servings) return false;
+      list.servings = servings;
+      list.lines = rescaleLines(list.lines, list.ingredients, servings, list.recipeServings);
+      return true;
+    });
+  }
+
+  /** Anyone: "Go with it" on the mediator's compromise. */
+  async acceptSuggestion(code: string, memberId: string): Promise<void> {
+    await this.update(code, (session) => {
+      requireMember(session, memberId);
+      if (!session.suggestion || session.matches.length > 0) {
+        throw new SessionError('not_allowed', 'There is no suggestion to accept');
+      }
+      if (session.suggestion.acceptedBy !== null) return false;
+      session.suggestion.acceptedBy = memberId;
+      return true;
+    });
+  }
+
+  /**
+   * The mediator, in the background: everyone finished and nothing matched. Claimed
+   * once per deck in `update` (mediatedAt), so it runs once however many changes
+   * land at the same moment.
+   */
+  private async mediate(code: string, claimedAt: number): Promise<void> {
+    if (!this.followUps) return;
+    const session = await this.store.get(code);
+    if (!session) return;
+    const memberIds = session.members.map((m) => m.id);
+    const result = await this.followUps.mediate({
+      sessionCode: code,
+      contenders: contenders(session.deck, session.swipes, memberIds, session.matchRule),
+      memberCount: memberIds.length,
+    });
+    if (!result) return;
+    await this.update(
+      code,
+      (current) => {
+        // A rebuild (new claim or none) or a match since: this pick is stale.
+        if (current.mediatedAt !== claimedAt || current.matches.length > 0) return false;
+        if (!current.deck.some((c) => c.id === result.cardId)) return false;
+        current.suggestion = { ...result, acceptedBy: null };
+        return true;
+      },
+      { ifExists: true },
+    );
+  }
+
+  /** Waits for background follow-up work (the mediator). For tests and shutdown. */
+  async settled(): Promise<void> {
+    while (this.background.size > 0) await Promise.allSettled([...this.background]);
   }
 
   /**
@@ -493,6 +687,7 @@ export class SessionService {
     { ifExists = false } = {},
   ): Promise<T> {
     let newMatches: string[] = [];
+    let mediateAt: number | null = null;
     const { value, saved } = await this.withLock(code, () =>
       this.store.update(code, (session) => {
         if (!session) {
@@ -503,6 +698,12 @@ export class SessionService {
         if (result === false) return { save: false, value: result };
 
         newMatches = recordNewMatches(session, this.now());
+        // Claimed in the same transaction as the change that finished the session
+        // (a last swipe, or someone leaving), so it starts exactly once.
+        if (this.followUps && needsMediation(session, this.now())) {
+          session.mediatedAt = this.now();
+          mediateAt = session.mediatedAt;
+        }
         session.updatedAt = this.now();
         return { save: true, value: result };
       }),
@@ -511,6 +712,14 @@ export class SessionService {
     if (saved) {
       this.emit({ type: 'changed', code, view: toView(saved) });
       for (const cardId of newMatches) this.emit({ type: 'match', code, cardId });
+    }
+    const claimed: number | null = mediateAt;
+    if (saved && claimed !== null) {
+      // Off the swipe path: the swipe is already saved and broadcast.
+      const run: Promise<void> = this.mediate(code, claimed)
+        .catch((err) => console.error('[mediator]', err))
+        .finally(() => this.background.delete(run));
+      this.background.add(run);
     }
     return value;
   }
@@ -541,6 +750,36 @@ function requireMember(session: StoredSession, memberId: string): StoredMember {
   const member = session.members.find((m) => m.id === memberId);
   if (!member) throw new SessionError('not_member', 'You are not in this session');
   return member;
+}
+
+function readyList(session: StoredSession, cardId: string): ShoppingList {
+  const list = session.shoppingLists.find((l) => l.cardId === cardId);
+  if (list?.status !== 'ready') {
+    throw new SessionError('no_list', 'That shopping list is not ready');
+  }
+  return list;
+}
+
+/** True once every current member has swiped every card. */
+function isFinished(session: StoredSession): boolean {
+  if (session.status !== 'swiping' || session.members.length === 0) return false;
+  const deckIds = new Set(session.deck.map((c) => c.id));
+  return session.members.every(
+    (m) =>
+      session.swipes.filter((s) => s.memberId === m.id && deckIds.has(s.cardId)).length ===
+      session.deck.length,
+  );
+}
+
+/** Everyone finished, nothing matched, and no compromise yet (or a lost claim). */
+function needsMediation(session: StoredSession, now: number): boolean {
+  return (
+    session.deck.length > 0 &&
+    session.matches.length === 0 &&
+    session.suggestion === null &&
+    (session.mediatedAt === null || now - session.mediatedAt > MEDIATION_STALE_MS) &&
+    isFinished(session)
+  );
 }
 
 /** Applies the session's match rule to every unmatched card. Matches are sticky. */
@@ -584,12 +823,16 @@ export function toView(session: StoredSession): SessionView {
     members,
     swipes: session.swipes,
     matches: session.matches,
-    finished:
-      session.status === 'swiping' &&
-      members.length > 0 &&
-      members.every((m) => m.swipedCount === session.deck.length),
+    finished: isFinished(session),
     deckFilters: session.deckFilters,
     uncovered: session.deckFilters ? uncoveredFor(session, session.deckFilters) : [],
+    shoppingLists: session.shoppingLists,
+    suggestion: session.suggestion,
+    mediating:
+      session.mediatedAt !== null &&
+      session.suggestion === null &&
+      session.matches.length === 0 &&
+      isFinished(session),
   };
 }
 
