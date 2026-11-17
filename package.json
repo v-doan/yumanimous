@@ -18,7 +18,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "db:roles": "npm run -s db:roles -w @yumanimous/db",
-    "setup:prod": "tsx scripts/setupProduction.ts"
+    "setup:prod": "tsx scripts/setupProduction.ts",
+    "eval": "npm run eval -w @yumanimous/api --"
   },
   "engines": {
     "node": ">=22.22.2"

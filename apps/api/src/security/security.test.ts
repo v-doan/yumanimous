@@ -116,6 +116,7 @@ describe('the deployed server', () => {
     writeFileSync(path.join(dir, 'index.html'), '<!doctype html><title>Yumanimous</title>');
     mkdirSync(path.join(dir, 'assets'));
     writeFileSync(path.join(dir, 'assets', 'app-abc123.js'), 'console.log(1)');
+    writeFileSync(path.join(dir, 'manifest.webmanifest'), '{"name":"Yumanimous"}');
     return dir;
   }
 
@@ -184,6 +185,10 @@ describe('the deployed server', () => {
     const asset = await fetch(`${server!.url}/assets/app-abc123.js`);
     expect(asset.headers.get('cache-control')).toContain('immutable');
     expect((await fetch(`${server!.url}/assets/missing.js`)).status).toBe(404);
+
+    // The PWA manifest is served as a manifest (browsers ignore it as text/plain).
+    const manifest = await fetch(`${server!.url}/manifest.webmanifest`);
+    expect(manifest.headers.get('content-type')).toContain('application/manifest+json');
 
     // API routes never fall back to the page, and debug routes don't exist.
     const api = await fetch(`${server!.url}/api/debug/ai`);

@@ -19,6 +19,7 @@ coverage
 **/__fixtures__
 **/testing
 apps/api/scripts
+apps/api/evals
 scripts
 docker-compose.yml
 Dockerfile

@@ -1,13 +1,102 @@
+<img src="apps/web/public/icon-192.png" alt="" width="72" align="right" />
+
 # Yumanimous
 
-Swipe-to-decide for groups: everyone swipes on a shared deck, and it's a match when the group is
-_yumanimous_. Zero install: join from a link in the group chat.
+Swipe-to-decide for groups: everyone swipes on a shared deck of recipes, and it's a match when the
+group is _yumanimous_. Zero install: the host drops a link in the group chat, friends open it in
+their phone browser, type a name and swipe.
 
-> Work in progress. Phase 8: "Play again" runs another round with the same people, and the next deck
-> learns from how everyone swiped. Earlier phases: a sous-chef agent's shared shopping list and a
-> no-match mediator, an orchestrator with scout, curator and writer subagents that builds each deck
-> (under 1¢), live sessions over WebSockets, Postgres, a cached recipe API, MCP servers, and food
-> rules that bind the whole group.
+**Try it:** [yumanimous.fly.dev](https://yumanimous.fly.dev) (open it on two phones, or a phone and
+a laptop). It can also be installed to the home screen.
+
+<p>
+  <img src="docs/screenshots/1-rules.jpg" alt="Food rules typed in plain words become Must and Prefer chips" width="24%" />
+  <img src="docs/screenshots/2-swipe.jpg" alt="A recipe card with an AI-written blurb, and Skip and Yum buttons" width="24%" />
+  <img src="docs/screenshots/3-match.jpg" alt="It's a match: everyone said yum to Indian Lentil Dahl" width="24%" />
+  <img src="docs/screenshots/4-shopping-list.jpg" alt="The shared shopping list, scaled to 3 servings and sorted by aisle" width="24%" />
+</p>
+
+## What's interesting here
+
+- **AI suggests, code enforces.** Claude agents build the deck, write the shopping list and suggest
+  a compromise, but plain code decides what is safe to eat, validates every proposal, and has a
+  non-AI fallback for each job. Swiping, vote counting and matching never touch AI.
+- **Orchestration with subagents** (Claude Agent SDK): an orchestrator runs a scout, a curator and a
+  writer, each limited to the tools its job needs, handing work in through tools rather than text.
+  A deck costs about half a cent and goes live in ~15 s.
+- **MCP servers** for recipes and for session data (read-only, on a least-privilege database role),
+  used in-process by the agents and also usable from Claude Desktop or Claude Code.
+- **Measured, not vibes:** an [eval set](apps/api/evals/RESULTS.md) graded by code covers all three
+  AI jobs, including prompt-injection attempts in guest names and recipe text.
+- **Hardened for a public URL:** rate and cost limits, a strict CSP, least-privilege Postgres roles,
+  a startup guard against unsafe config, pinned supply chain, CI-gated deploys
+  ([details](#security)).
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Phones["Phones: any browser, no install"]
+    H[Host]
+    G1[Guest]
+    G2[Guest]
+  end
+  subgraph Fly["Fly.io: one always-on machine"]
+    API["Express: REST API + the web app"]
+    RT["Socket.io: one room per session"]
+    SVC["SessionService: rules, votes, matches (plain code)"]
+    AG["Claude Agent SDK: orchestrator + subagents, sous-chef, mediator"]
+    MR["mcp-recipes (in-process)"]
+    MS["mcp-session (in-process, read-only)"]
+  end
+  H & G1 & G2 -- "HTTPS + WebSocket" --> API & RT
+  API & RT --> SVC
+  SVC -- "deck · shopping list · compromise" --> AG
+  AG --> MR & MS
+  SVC -- "app role: data only" --> DB[(Neon Postgres)]
+  MS -- "reader role: SELECT only, no token hashes" --> DB
+  MR -- "cached in Postgres" --> SP[Spoonacular recipe API]
+  AG --> AN[Anthropic API]
+```
+
+## Where AI runs, and what checks it
+
+```mermaid
+flowchart TD
+  Start[Host taps Start] --> Search["Recipe search WITH everyone's hard rules (code)"]
+  Search --> Orch[Orchestrator]
+  Orch --> Scout["Scout: widens the pool toward the group's tastes"]
+  Scout --> Curator["Curator: picks and orders 20 cards"]
+  Curator --> C1{"Code: from the pool, each once"}
+  C1 -- ok --> Live[Deck goes live]
+  C1 -- "invalid · timeout · over budget" --> Plain[Non-AI deck]
+  Plain --> Live
+  Curator -.-> Writer["Writer: card blurbs"] -.-> C2{"Code: cleaned, ≤160 chars"} -.-> Live
+  Live --> Swipe["Swiping and matching: plain code, no AI"]
+  Swipe -- match --> Chef["Sous-chef: groups the ingredients"]
+  Chef --> C3{"Code: every ingredient exactly once; code scales the amounts"}
+  Swipe -- "no match" --> Med["Mediator: suggests a compromise"]
+  Med --> C4{"Code: at most one yum behind the leader"}
+```
+
+## Evals
+
+`npm run eval` runs 14 fixed cases against the real model and grades them **with code, not with
+another model**, so a full run is cheap (about 4¢), repeatable and easy to explain. Latest run:
+**14/14 pass, 0 hard-rule violations** ([full results](apps/api/evals/RESULTS.md)).
+
+| Job          | Cases                                                                                                 | What the code grades                                                                                                 |
+| ------------ | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Deck builder | vegan + gluten free, tree-nut allergy, under 20 min, clashing tastes, round 2 with history, injection | hard-rule breaks (against the recipe facts), invented cards, cards from earlier rounds, taste vs a code-only ranking |
+| Mediator     | clear winner, tie, nobody said yum, instructions in guest names                                       | pick within one yum of the leader, no diet or health talk, no instructions followed                                  |
+| Sous-chef    | garlic used twice, 14-ingredient curry, butter twice, instructions in an ingredient                   | every ingredient once, duplicates merged, staples marked "at home", no quantities in names                           |
+
+Deck cases use recipe pools captured once from the recipe API ([`pools.json`](apps/api/evals/fixtures/pools.json),
+ids, titles, tags and diet facts only) with extra searches off, so runs compare like with like. The
+evals already caught one bug of their own: the first version ranked round 2's baseline over cards
+the app had already removed, which made a correct curator look wrong. `--case=<id>` reruns one
+case while tuning a prompt. Manual only, never in CI: it costs money and the model isn't
+deterministic.
 
 ## Quick start
 
@@ -370,6 +459,7 @@ exactly as `.mcp.json` describes, lists its tools and calls a few.
 | `packages/db`          | Postgres schema (SQL migrations), pools, API cache, test database helpers       |
 | `packages/mcp-recipes` | MCP server + Spoonacular client (also used by the API's deck source)            |
 | `packages/mcp-session` | Read-only MCP server over live sessions                                         |
+| `apps/api/evals`       | The eval set: cases, code graders, recipe pool fixtures, latest results         |
 
 Inside `apps/api`, `SessionService` holds every session rule and has no HTTP or socket code;
 `http/` and `realtime/` are thin transports over it. `SessionStore` (in-memory or Postgres) and
@@ -377,3 +467,7 @@ Inside `apps/api`, `SessionService` holds every session rule and has no HTTP or 
 both stores.
 
 Design tokens (colours, fonts, radii) live in one file: `apps/web/src/styles/tokens.css`.
+
+The web app is installable (a manifest and icons in `apps/web/public`). There is deliberately no
+service worker: every screen needs the live socket, so offline caching would add nothing, and a
+caching worker is the usual cause of people seeing an old version after a deploy.

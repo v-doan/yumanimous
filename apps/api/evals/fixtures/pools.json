@@ -1,0 +1,2898 @@
+{
+  "vegan-gf": {
+    "cards": [
+      {
+        "id": "spoonacular:716627",
+        "title": "Easy Homemade Rice and Beans",
+        "tags": ["vegan", "35 min"],
+        "blurb": "Easy Homemade Rice and Beans"
+      },
+      {
+        "id": "spoonacular:664147",
+        "title": "Tuscan White Bean Soup with Olive Oil and Rosemary",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Tuscan White Bean Soup with Olive Oil and Rosemary"
+      },
+      {
+        "id": "spoonacular:647830",
+        "title": "Indian Lentil Dahl",
+        "tags": ["vegan", "45 min", "Indian"],
+        "blurb": "Indian Lentil Dahl"
+      },
+      {
+        "id": "spoonacular:663559",
+        "title": "Tomato and lentil soup",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Tomato and lentil soup"
+      },
+      {
+        "id": "spoonacular:646738",
+        "title": "Herbivoracious' White Bean and Kale Soup",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Herbivoracious' White Bean and Kale Soup"
+      },
+      {
+        "id": "spoonacular:1098387",
+        "title": "Quinoa Salad with Barberries & Nuts",
+        "tags": ["vegan", "30 min"],
+        "blurb": "Quinoa Salad with Barberries & Nuts"
+      },
+      {
+        "id": "spoonacular:664501",
+        "title": "Vegan Taco bowls with Cilantro Lime Cauliflower Rice",
+        "tags": ["vegan", "3 h", "Mexican"],
+        "blurb": "Vegan Taco bowls with Cilantro Lime Cauliflower Rice"
+      },
+      {
+        "id": "spoonacular:646043",
+        "title": "Gujarati Dry Mung Bean Curry",
+        "tags": ["vegan", "45 min", "Indian"],
+        "blurb": "Gujarati Dry Mung Bean Curry"
+      },
+      {
+        "id": "spoonacular:642610",
+        "title": "Farm Fresh Vegetable Stew",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Farm Fresh Vegetable Stew"
+      },
+      {
+        "id": "spoonacular:649944",
+        "title": "Lentil Mango Salad",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Lentil Mango Salad"
+      },
+      {
+        "id": "spoonacular:637297",
+        "title": "Cauliflower Chickpea Stew",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Cauliflower Chickpea Stew"
+      },
+      {
+        "id": "spoonacular:652393",
+        "title": "Moosewood Lentil Soup",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Moosewood Lentil Soup"
+      },
+      {
+        "id": "spoonacular:649921",
+        "title": "Lentil Fritters (Parippu Vada)",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Lentil Fritters (Parippu Vada)"
+      },
+      {
+        "id": "spoonacular:649946",
+        "title": "Lentil, Sweet Potato and Spinach Soup",
+        "tags": ["vegan", "4 h"],
+        "blurb": "Lentil, Sweet Potato and Spinach Soup"
+      },
+      {
+        "id": "spoonacular:652594",
+        "title": "Mung Bean Sprout and Quinoa Salad",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Mung Bean Sprout and Quinoa Salad"
+      },
+      {
+        "id": "spoonacular:639954",
+        "title": "Colorful Wild Rice Salad",
+        "tags": ["vegan", "30 min"],
+        "blurb": "Colorful Wild Rice Salad"
+      },
+      {
+        "id": "spoonacular:641387",
+        "title": "Delicious Creamy Lentils and Chestnuts Soup",
+        "tags": ["vegan", "30 min"],
+        "blurb": "Delicious Creamy Lentils and Chestnuts Soup"
+      },
+      {
+        "id": "spoonacular:1095753",
+        "title": "Roasted Cauliflower Detox Bowl with Tahini Sauce",
+        "tags": ["vegan", "50 min"],
+        "blurb": "Roasted Cauliflower Detox Bowl with Tahini Sauce"
+      },
+      {
+        "id": "spoonacular:1096053",
+        "title": "GF Vegan Creamy Broccoli Pasta",
+        "tags": ["vegan", "35 min"],
+        "blurb": "GF Vegan Creamy Broccoli Pasta"
+      },
+      {
+        "id": "spoonacular:1096231",
+        "title": "Slow Cooker Healthy Sweet Potato Soup with Coconut and Pistachios",
+        "tags": ["vegan", "4 h 35 min"],
+        "blurb": "Slow Cooker Healthy Sweet Potato Soup with Coconut and Pistachios"
+      },
+      {
+        "id": "spoonacular:665831",
+        "title": "fennel, Peppers, Lettuce Salad",
+        "tags": ["vegan", "45 min"],
+        "blurb": "fennel, Peppers, Lettuce Salad"
+      },
+      {
+        "id": "spoonacular:632710",
+        "title": "Arhar dal {Yellow split peas / Toovar dal} with spicy tempering",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Arhar dal {Yellow split peas / Toovar dal} with spicy tempering"
+      },
+      {
+        "id": "spoonacular:641583",
+        "title": "Double Blueberry Quinoa Salad",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Double Blueberry Quinoa Salad"
+      },
+      {
+        "id": "spoonacular:632718",
+        "title": "Armenian Stew",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Armenian Stew"
+      },
+      {
+        "id": "spoonacular:635081",
+        "title": "Black Beans & Brown Rice With Garlicky Kale",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Black Beans & Brown Rice With Garlicky Kale"
+      },
+      {
+        "id": "spoonacular:1095749",
+        "title": "Slow Cooked Black Bean Soup",
+        "tags": ["vegan", "2 h 50 min"],
+        "blurb": "Slow Cooked Black Bean Soup"
+      },
+      {
+        "id": "spoonacular:640982",
+        "title": "Cuban Black Beans & Rice",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Cuban Black Beans & Rice"
+      },
+      {
+        "id": "spoonacular:657682",
+        "title": "Quinoa Stuffed Mushrooms",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Quinoa Stuffed Mushrooms"
+      },
+      {
+        "id": "spoonacular:636604",
+        "title": "Butternut Squash Tofu Salad With Toasted Hazelnuts",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Butternut Squash Tofu Salad With Toasted Hazelnuts"
+      },
+      {
+        "id": "spoonacular:1096306",
+        "title": "Vegan Chana Masala Curry",
+        "tags": ["vegan", "30 min", "Indian"],
+        "blurb": "Vegan Chana Masala Curry"
+      }
+    ],
+    "facts": {
+      "spoonacular:716627": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 35
+      },
+      "spoonacular:664147": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:647830": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:663559": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:646738": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:1098387": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 30
+      },
+      "spoonacular:664501": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 180
+      },
+      "spoonacular:646043": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:642610": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:649944": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:637297": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:652393": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:649921": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:649946": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 240
+      },
+      "spoonacular:652594": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:639954": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 30
+      },
+      "spoonacular:641387": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 30
+      },
+      "spoonacular:1095753": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 50
+      },
+      "spoonacular:1096053": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 35
+      },
+      "spoonacular:1096231": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 275
+      },
+      "spoonacular:665831": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:632710": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:641583": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:632718": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:635081": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:1095749": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 170
+      },
+      "spoonacular:640982": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:657682": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:636604": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:1096306": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 30
+      }
+    }
+  },
+  "tree-nut": {
+    "cards": [
+      {
+        "id": "spoonacular:776505",
+        "title": "Sausage & Pepperoni Stromboli",
+        "tags": ["28 min"],
+        "blurb": "Sausage & Pepperoni Stromboli"
+      },
+      {
+        "id": "spoonacular:715467",
+        "title": "Turkey Pot Pie",
+        "tags": ["45 min"],
+        "blurb": "Turkey Pot Pie"
+      },
+      {
+        "id": "spoonacular:715419",
+        "title": "Slow Cooker Spicy Hot Wings",
+        "tags": ["gluten-free", "14 min", "American"],
+        "blurb": "Slow Cooker Spicy Hot Wings"
+      },
+      {
+        "id": "spoonacular:997285",
+        "title": "Shrimp and Asparagus Foil Packs with Garlic Lemon Butter Sauce",
+        "tags": ["45 min"],
+        "blurb": "Shrimp and Asparagus Foil Packs with Garlic Lemon Butter Sauce"
+      },
+      {
+        "id": "spoonacular:715421",
+        "title": "Cheesy Chicken Enchilada Quinoa Casserole",
+        "tags": ["30 min", "Mexican"],
+        "blurb": "Cheesy Chicken Enchilada Quinoa Casserole"
+      },
+      {
+        "id": "spoonacular:715437",
+        "title": "Homemade King Ranch Chicken Casserole",
+        "tags": ["1 h 5 min"],
+        "blurb": "Homemade King Ranch Chicken Casserole"
+      },
+      {
+        "id": "spoonacular:715394",
+        "title": "Chicken Enchilada Casserole",
+        "tags": ["45 min", "Mexican"],
+        "blurb": "Chicken Enchilada Casserole"
+      },
+      {
+        "id": "spoonacular:715544",
+        "title": "Brown Butter Twice Baked Sweet Potatoes",
+        "tags": ["gluten-free", "1 h 35 min"],
+        "blurb": "Brown Butter Twice Baked Sweet Potatoes"
+      },
+      {
+        "id": "spoonacular:715562",
+        "title": "Loaded Baked Potato Soup",
+        "tags": ["1 h"],
+        "blurb": "Loaded Baked Potato Soup"
+      },
+      {
+        "id": "spoonacular:715391",
+        "title": "Slow Cooker Chicken Taco Soup",
+        "tags": ["gluten-free", "8 h 5 min", "Mexican"],
+        "blurb": "Slow Cooker Chicken Taco Soup"
+      },
+      {
+        "id": "spoonacular:715545",
+        "title": "How to Make the Best Chicken Jambalaya",
+        "tags": ["55 min", "Cajun"],
+        "blurb": "How to Make the Best Chicken Jambalaya"
+      },
+      {
+        "id": "spoonacular:715415",
+        "title": "Red Lentil Soup with Chicken and Turnips",
+        "tags": ["55 min"],
+        "blurb": "Red Lentil Soup with Chicken and Turnips"
+      },
+      {
+        "id": "spoonacular:715392",
+        "title": "Easy Slow Cooker Chicken Tortilla Soup",
+        "tags": ["6 h 10 min"],
+        "blurb": "Easy Slow Cooker Chicken Tortilla Soup"
+      },
+      {
+        "id": "spoonacular:715397",
+        "title": "Cheesy Chicken and Rice Casserole",
+        "tags": ["1 h"],
+        "blurb": "Cheesy Chicken and Rice Casserole"
+      },
+      {
+        "id": "spoonacular:715523",
+        "title": "Chorizo and Beef Quinoa Stuffed Pepper",
+        "tags": ["30 min"],
+        "blurb": "Chorizo and Beef Quinoa Stuffed Pepper"
+      },
+      {
+        "id": "spoonacular:735820",
+        "title": "Crock-Pot: Asian-Style Country Ribs with Black Bean Garlic Sauce",
+        "tags": ["45 min", "Asian"],
+        "blurb": "Crock-Pot: Asian-Style Country Ribs with Black Bean Garlic Sauce"
+      },
+      {
+        "id": "spoonacular:716430",
+        "title": "Roasted Cabbage Wedge Salad with Yogurt Gorgonzola Dressing",
+        "tags": ["gluten-free", "45 min"],
+        "blurb": "Roasted Cabbage Wedge Salad with Yogurt Gorgonzola Dressing"
+      },
+      {
+        "id": "spoonacular:716627",
+        "title": "Easy Homemade Rice and Beans",
+        "tags": ["vegan", "35 min"],
+        "blurb": "Easy Homemade Rice and Beans"
+      },
+      {
+        "id": "spoonacular:715595",
+        "title": "How to Make the Cheesiest Bowtie Mac and Cheese",
+        "tags": ["vegetarian", "35 min", "American"],
+        "blurb": "How to Make the Cheesiest Bowtie Mac and Cheese"
+      },
+      {
+        "id": "spoonacular:716408",
+        "title": "Greek-Style Baked Fish: Fresh, Simple, and Delicious",
+        "tags": ["gluten-free", "30 min", "Mediterranean"],
+        "blurb": "Greek-Style Baked Fish: Fresh, Simple, and Delicious"
+      },
+      {
+        "id": "spoonacular:715493",
+        "title": "Slow Cooker Red Beans and Rice",
+        "tags": ["45 min"],
+        "blurb": "Slow Cooker Red Beans and Rice"
+      },
+      {
+        "id": "spoonacular:716297",
+        "title": "Breaded Shrimp and Spicy Mayo Appetizer",
+        "tags": ["20 min"],
+        "blurb": "Breaded Shrimp and Spicy Mayo Appetizer"
+      },
+      {
+        "id": "spoonacular:716296",
+        "title": "Peri Peri Chicken and Savoury Rice",
+        "tags": ["gluten-free", "45 min"],
+        "blurb": "Peri Peri Chicken and Savoury Rice"
+      },
+      {
+        "id": "spoonacular:716311",
+        "title": "Mango Fried Rice",
+        "tags": ["45 min", "Chinese"],
+        "blurb": "Mango Fried Rice"
+      },
+      {
+        "id": "spoonacular:716421",
+        "title": "Grilled Peach Melba with Vanilla Bean Frozen Yogurt",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Grilled Peach Melba with Vanilla Bean Frozen Yogurt"
+      },
+      {
+        "id": "spoonacular:715573",
+        "title": "Simple Skillet Lasagna",
+        "tags": ["35 min", "Mediterranean"],
+        "blurb": "Simple Skillet Lasagna"
+      },
+      {
+        "id": "spoonacular:716429",
+        "title": "Pasta with Garlic, Scallions, Cauliflower & Breadcrumbs",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Pasta with Garlic, Scallions, Cauliflower & Breadcrumbs"
+      },
+      {
+        "id": "spoonacular:641893",
+        "title": "Easy Cheesy Pizza Casserole",
+        "tags": ["45 min", "Mediterranean"],
+        "blurb": "Easy Cheesy Pizza Casserole"
+      },
+      {
+        "id": "spoonacular:638035",
+        "title": "Chicken Cordon Bleu",
+        "tags": ["45 min"],
+        "blurb": "Chicken Cordon Bleu"
+      },
+      {
+        "id": "spoonacular:715447",
+        "title": "Easy Vegetable Beef Soup",
+        "tags": ["2 h 30 min"],
+        "blurb": "Easy Vegetable Beef Soup"
+      }
+    ],
+    "facts": {
+      "spoonacular:776505": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 28
+      },
+      "spoonacular:715467": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715419": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 14
+      },
+      "spoonacular:997285": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715421": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 30
+      },
+      "spoonacular:715437": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 65
+      },
+      "spoonacular:715394": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715544": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 95
+      },
+      "spoonacular:715562": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 60
+      },
+      "spoonacular:715391": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 485
+      },
+      "spoonacular:715545": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 55
+      },
+      "spoonacular:715415": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 55
+      },
+      "spoonacular:715392": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 370
+      },
+      "spoonacular:715397": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 60
+      },
+      "spoonacular:715523": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 30
+      },
+      "spoonacular:735820": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716430": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716627": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 35
+      },
+      "spoonacular:715595": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 35
+      },
+      "spoonacular:716408": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 30
+      },
+      "spoonacular:715493": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716297": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 20
+      },
+      "spoonacular:716296": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716311": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716421": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715573": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 35
+      },
+      "spoonacular:716429": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:641893": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:638035": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715447": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 150
+      }
+    }
+  },
+  "quick": {
+    "cards": [
+      {
+        "id": "spoonacular:715419",
+        "title": "Slow Cooker Spicy Hot Wings",
+        "tags": ["gluten-free", "14 min", "American"],
+        "blurb": "Slow Cooker Spicy Hot Wings"
+      },
+      {
+        "id": "spoonacular:716297",
+        "title": "Breaded Shrimp and Spicy Mayo Appetizer",
+        "tags": ["20 min"],
+        "blurb": "Breaded Shrimp and Spicy Mayo Appetizer"
+      },
+      {
+        "id": "spoonacular:982365",
+        "title": "Instant Pot Hawaiian Chicken",
+        "tags": ["gluten-free", "18 min"],
+        "blurb": "Instant Pot Hawaiian Chicken"
+      },
+      {
+        "id": "spoonacular:732255",
+        "title": "Cheesy Cowboy Quesadillas",
+        "tags": ["gluten-free", "10 min", "Mexican"],
+        "blurb": "Cheesy Cowboy Quesadillas"
+      },
+      {
+        "id": "spoonacular:642585",
+        "title": "Farfalle with fresh tomatoes, basil and mozzarella",
+        "tags": ["vegetarian", "15 min"],
+        "blurb": "Farfalle with fresh tomatoes, basil and mozzarella"
+      },
+      {
+        "id": "spoonacular:1502523",
+        "title": "Instant Pot Chicken Thighs",
+        "tags": ["gluten-free", "13 min"],
+        "blurb": "Instant Pot Chicken Thighs"
+      },
+      {
+        "id": "spoonacular:1160166",
+        "title": "How to Make an Amazing Chicken Salad with Apples and Celery",
+        "tags": ["gluten-free", "10 min"],
+        "blurb": "How to Make an Amazing Chicken Salad with Apples and Celery"
+      },
+      {
+        "id": "spoonacular:639306",
+        "title": "Simple Poached Egg Dinner",
+        "tags": ["gluten-free", "20 min"],
+        "blurb": "Simple Poached Egg Dinner"
+      },
+      {
+        "id": "spoonacular:1063645",
+        "title": "The Secret to Easy Skillet Filet Mignon Steak Tacos",
+        "tags": ["20 min", "Mexican"],
+        "blurb": "The Secret to Easy Skillet Filet Mignon Steak Tacos"
+      },
+      {
+        "id": "spoonacular:643633",
+        "title": "Fresh Tomato Mozzarella Side Salad",
+        "tags": ["vegetarian", "15 min"],
+        "blurb": "Fresh Tomato Mozzarella Side Salad"
+      },
+      {
+        "id": "spoonacular:1165787",
+        "title": "Instant Pot Chili Mac",
+        "tags": ["14 min", "American"],
+        "blurb": "Instant Pot Chili Mac"
+      },
+      {
+        "id": "spoonacular:664975",
+        "title": "Wasabi & Honey Glazed-Salmon",
+        "tags": ["20 min"],
+        "blurb": "Wasabi & Honey Glazed-Salmon"
+      },
+      {
+        "id": "spoonacular:645315",
+        "title": "Greek Inspired Spring Omelet",
+        "tags": ["vegetarian", "20 min", "Mediterranean"],
+        "blurb": "Greek Inspired Spring Omelet"
+      },
+      {
+        "id": "spoonacular:643059",
+        "title": "Flank Steak With Garlicky Mediterranean Salad",
+        "tags": ["15 min"],
+        "blurb": "Flank Steak With Garlicky Mediterranean Salad"
+      },
+      {
+        "id": "spoonacular:663050",
+        "title": "Tex-Mex Burger",
+        "tags": ["15 min", "American"],
+        "blurb": "Tex-Mex Burger"
+      },
+      {
+        "id": "spoonacular:1095992",
+        "title": "Turkey Ranch BLT",
+        "tags": ["10 min"],
+        "blurb": "Turkey Ranch BLT"
+      },
+      {
+        "id": "spoonacular:644038",
+        "title": "Fruity Curried Chicken Salad",
+        "tags": ["gluten-free", "15 min"],
+        "blurb": "Fruity Curried Chicken Salad"
+      },
+      {
+        "id": "spoonacular:645856",
+        "title": "Grilled Salmon With Cherry, Pineapple, Mango Salsa",
+        "tags": ["gluten-free", "15 min", "Mexican"],
+        "blurb": "Grilled Salmon With Cherry, Pineapple, Mango Salsa"
+      },
+      {
+        "id": "spoonacular:642593",
+        "title": "Farfalle With Sun-Dried Tomato Pesto, Sausage and Fennel",
+        "tags": ["20 min"],
+        "blurb": "Farfalle With Sun-Dried Tomato Pesto, Sausage and Fennel"
+      },
+      {
+        "id": "spoonacular:1095698",
+        "title": "Lemon Garlic Baked Shrimp",
+        "tags": ["gluten-free", "20 min"],
+        "blurb": "Lemon Garlic Baked Shrimp"
+      },
+      {
+        "id": "spoonacular:639957",
+        "title": "Colorful Tomato and Spinach Seafood Pasta",
+        "tags": ["20 min"],
+        "blurb": "Colorful Tomato and Spinach Seafood Pasta"
+      },
+      {
+        "id": "spoonacular:645514",
+        "title": "Green Salad With Fresh Orange Juice Dressing",
+        "tags": ["vegetarian", "15 min"],
+        "blurb": "Green Salad With Fresh Orange Juice Dressing"
+      },
+      {
+        "id": "spoonacular:660588",
+        "title": "Smoked Salmon & Ricotta Wraps",
+        "tags": ["gluten-free", "10 min"],
+        "blurb": "Smoked Salmon & Ricotta Wraps"
+      },
+      {
+        "id": "spoonacular:1095731",
+        "title": "Peach and Pistachio Greek Yogurt Bowl",
+        "tags": ["vegetarian", "5 min", "Mediterranean"],
+        "blurb": "Peach and Pistachio Greek Yogurt Bowl"
+      },
+      {
+        "id": "spoonacular:648279",
+        "title": "Italian Tuna Pasta",
+        "tags": ["20 min", "Mediterranean"],
+        "blurb": "Italian Tuna Pasta"
+      },
+      {
+        "id": "spoonacular:1095769",
+        "title": "Mediterranean-inspired Tuna Almond Whole-wheat Spaghetti",
+        "tags": ["20 min"],
+        "blurb": "Mediterranean-inspired Tuna Almond Whole-wheat Spaghetti"
+      },
+      {
+        "id": "spoonacular:649988",
+        "title": "Light and Easy Alfredo",
+        "tags": ["vegetarian", "15 min", "Mediterranean"],
+        "blurb": "Light and Easy Alfredo"
+      },
+      {
+        "id": "spoonacular:1098288",
+        "title": "Tuna Avocado Salad",
+        "tags": ["gluten-free", "15 min"],
+        "blurb": "Tuna Avocado Salad"
+      },
+      {
+        "id": "spoonacular:640424",
+        "title": "Cranberry Turkey Cutlets With Fresh Chavrie",
+        "tags": ["gluten-free", "15 min"],
+        "blurb": "Cranberry Turkey Cutlets With Fresh Chavrie"
+      },
+      {
+        "id": "spoonacular:1096203",
+        "title": "Halloumi, Blueberry & Spinach Salad",
+        "tags": ["gluten-free", "15 min"],
+        "blurb": "Halloumi, Blueberry & Spinach Salad"
+      }
+    ],
+    "facts": {
+      "spoonacular:715419": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 14
+      },
+      "spoonacular:716297": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 20
+      },
+      "spoonacular:982365": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 18
+      },
+      "spoonacular:732255": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 10
+      },
+      "spoonacular:642585": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 15
+      },
+      "spoonacular:1502523": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 13
+      },
+      "spoonacular:1160166": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 10
+      },
+      "spoonacular:639306": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 20
+      },
+      "spoonacular:1063645": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 20
+      },
+      "spoonacular:643633": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 15
+      },
+      "spoonacular:1165787": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 14
+      },
+      "spoonacular:664975": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 20
+      },
+      "spoonacular:645315": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 20
+      },
+      "spoonacular:643059": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 15
+      },
+      "spoonacular:663050": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 15
+      },
+      "spoonacular:1095992": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 10
+      },
+      "spoonacular:644038": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 15
+      },
+      "spoonacular:645856": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 15
+      },
+      "spoonacular:642593": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 20
+      },
+      "spoonacular:1095698": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 20
+      },
+      "spoonacular:639957": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 20
+      },
+      "spoonacular:645514": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 15
+      },
+      "spoonacular:660588": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 10
+      },
+      "spoonacular:1095731": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 5
+      },
+      "spoonacular:648279": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 20
+      },
+      "spoonacular:1095769": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 20
+      },
+      "spoonacular:649988": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 15
+      },
+      "spoonacular:1098288": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 15
+      },
+      "spoonacular:640424": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 15
+      },
+      "spoonacular:1096203": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 15
+      }
+    }
+  },
+  "clash": {
+    "cards": [
+      {
+        "id": "spoonacular:776505",
+        "title": "Sausage & Pepperoni Stromboli",
+        "tags": ["28 min"],
+        "blurb": "Sausage & Pepperoni Stromboli"
+      },
+      {
+        "id": "spoonacular:715467",
+        "title": "Turkey Pot Pie",
+        "tags": ["45 min"],
+        "blurb": "Turkey Pot Pie"
+      },
+      {
+        "id": "spoonacular:715419",
+        "title": "Slow Cooker Spicy Hot Wings",
+        "tags": ["gluten-free", "14 min", "American"],
+        "blurb": "Slow Cooker Spicy Hot Wings"
+      },
+      {
+        "id": "spoonacular:997285",
+        "title": "Shrimp and Asparagus Foil Packs with Garlic Lemon Butter Sauce",
+        "tags": ["45 min"],
+        "blurb": "Shrimp and Asparagus Foil Packs with Garlic Lemon Butter Sauce"
+      },
+      {
+        "id": "spoonacular:715421",
+        "title": "Cheesy Chicken Enchilada Quinoa Casserole",
+        "tags": ["30 min", "Mexican"],
+        "blurb": "Cheesy Chicken Enchilada Quinoa Casserole"
+      },
+      {
+        "id": "spoonacular:715437",
+        "title": "Homemade King Ranch Chicken Casserole",
+        "tags": ["1 h 5 min"],
+        "blurb": "Homemade King Ranch Chicken Casserole"
+      },
+      {
+        "id": "spoonacular:715394",
+        "title": "Chicken Enchilada Casserole",
+        "tags": ["45 min", "Mexican"],
+        "blurb": "Chicken Enchilada Casserole"
+      },
+      {
+        "id": "spoonacular:715544",
+        "title": "Brown Butter Twice Baked Sweet Potatoes",
+        "tags": ["gluten-free", "1 h 35 min"],
+        "blurb": "Brown Butter Twice Baked Sweet Potatoes"
+      },
+      {
+        "id": "spoonacular:715562",
+        "title": "Loaded Baked Potato Soup",
+        "tags": ["1 h"],
+        "blurb": "Loaded Baked Potato Soup"
+      },
+      {
+        "id": "spoonacular:715391",
+        "title": "Slow Cooker Chicken Taco Soup",
+        "tags": ["gluten-free", "8 h 5 min", "Mexican"],
+        "blurb": "Slow Cooker Chicken Taco Soup"
+      },
+      {
+        "id": "spoonacular:715545",
+        "title": "How to Make the Best Chicken Jambalaya",
+        "tags": ["55 min", "Cajun"],
+        "blurb": "How to Make the Best Chicken Jambalaya"
+      },
+      {
+        "id": "spoonacular:715415",
+        "title": "Red Lentil Soup with Chicken and Turnips",
+        "tags": ["55 min"],
+        "blurb": "Red Lentil Soup with Chicken and Turnips"
+      },
+      {
+        "id": "spoonacular:715392",
+        "title": "Easy Slow Cooker Chicken Tortilla Soup",
+        "tags": ["6 h 10 min"],
+        "blurb": "Easy Slow Cooker Chicken Tortilla Soup"
+      },
+      {
+        "id": "spoonacular:715397",
+        "title": "Cheesy Chicken and Rice Casserole",
+        "tags": ["1 h"],
+        "blurb": "Cheesy Chicken and Rice Casserole"
+      },
+      {
+        "id": "spoonacular:715523",
+        "title": "Chorizo and Beef Quinoa Stuffed Pepper",
+        "tags": ["30 min"],
+        "blurb": "Chorizo and Beef Quinoa Stuffed Pepper"
+      },
+      {
+        "id": "spoonacular:735820",
+        "title": "Crock-Pot: Asian-Style Country Ribs with Black Bean Garlic Sauce",
+        "tags": ["45 min", "Asian"],
+        "blurb": "Crock-Pot: Asian-Style Country Ribs with Black Bean Garlic Sauce"
+      },
+      {
+        "id": "spoonacular:716430",
+        "title": "Roasted Cabbage Wedge Salad with Yogurt Gorgonzola Dressing",
+        "tags": ["gluten-free", "45 min"],
+        "blurb": "Roasted Cabbage Wedge Salad with Yogurt Gorgonzola Dressing"
+      },
+      {
+        "id": "spoonacular:716627",
+        "title": "Easy Homemade Rice and Beans",
+        "tags": ["vegan", "35 min"],
+        "blurb": "Easy Homemade Rice and Beans"
+      },
+      {
+        "id": "spoonacular:715595",
+        "title": "How to Make the Cheesiest Bowtie Mac and Cheese",
+        "tags": ["vegetarian", "35 min", "American"],
+        "blurb": "How to Make the Cheesiest Bowtie Mac and Cheese"
+      },
+      {
+        "id": "spoonacular:715420",
+        "title": "Barbecue Chicken Cauliflower Couscous Bowls",
+        "tags": ["45 min", "bbq"],
+        "blurb": "Barbecue Chicken Cauliflower Couscous Bowls"
+      },
+      {
+        "id": "spoonacular:716408",
+        "title": "Greek-Style Baked Fish: Fresh, Simple, and Delicious",
+        "tags": ["gluten-free", "30 min", "Mediterranean"],
+        "blurb": "Greek-Style Baked Fish: Fresh, Simple, and Delicious"
+      },
+      {
+        "id": "spoonacular:715493",
+        "title": "Slow Cooker Red Beans and Rice",
+        "tags": ["45 min"],
+        "blurb": "Slow Cooker Red Beans and Rice"
+      },
+      {
+        "id": "spoonacular:716297",
+        "title": "Breaded Shrimp and Spicy Mayo Appetizer",
+        "tags": ["20 min"],
+        "blurb": "Breaded Shrimp and Spicy Mayo Appetizer"
+      },
+      {
+        "id": "spoonacular:716296",
+        "title": "Peri Peri Chicken and Savoury Rice",
+        "tags": ["gluten-free", "45 min"],
+        "blurb": "Peri Peri Chicken and Savoury Rice"
+      },
+      {
+        "id": "spoonacular:716311",
+        "title": "Mango Fried Rice",
+        "tags": ["45 min", "Chinese"],
+        "blurb": "Mango Fried Rice"
+      },
+      {
+        "id": "spoonacular:716421",
+        "title": "Grilled Peach Melba with Vanilla Bean Frozen Yogurt",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Grilled Peach Melba with Vanilla Bean Frozen Yogurt"
+      },
+      {
+        "id": "spoonacular:715573",
+        "title": "Simple Skillet Lasagna",
+        "tags": ["35 min", "Mediterranean"],
+        "blurb": "Simple Skillet Lasagna"
+      },
+      {
+        "id": "spoonacular:716429",
+        "title": "Pasta with Garlic, Scallions, Cauliflower & Breadcrumbs",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Pasta with Garlic, Scallions, Cauliflower & Breadcrumbs"
+      },
+      {
+        "id": "spoonacular:641893",
+        "title": "Easy Cheesy Pizza Casserole",
+        "tags": ["45 min", "Mediterranean"],
+        "blurb": "Easy Cheesy Pizza Casserole"
+      },
+      {
+        "id": "spoonacular:638035",
+        "title": "Chicken Cordon Bleu",
+        "tags": ["45 min"],
+        "blurb": "Chicken Cordon Bleu"
+      },
+      {
+        "id": "spoonacular:715447",
+        "title": "Easy Vegetable Beef Soup",
+        "tags": ["2 h 30 min"],
+        "blurb": "Easy Vegetable Beef Soup"
+      },
+      {
+        "id": "spoonacular:640886",
+        "title": "Crockpot Chicken and Dumplings",
+        "tags": ["45 min"],
+        "blurb": "Crockpot Chicken and Dumplings"
+      },
+      {
+        "id": "spoonacular:730914",
+        "title": "Basil Infused Balsamic Oven Baked Chicken",
+        "tags": ["gluten-free", "45 min"],
+        "blurb": "Basil Infused Balsamic Oven Baked Chicken"
+      },
+      {
+        "id": "spoonacular:645978",
+        "title": "Ground Turkey Stuffed Peppers",
+        "tags": ["45 min"],
+        "blurb": "Ground Turkey Stuffed Peppers"
+      },
+      {
+        "id": "spoonacular:724324",
+        "title": "Creamy Cauliflower Chowder",
+        "tags": ["40 min"],
+        "blurb": "Creamy Cauliflower Chowder"
+      },
+      {
+        "id": "spoonacular:716300",
+        "title": "Plantain Pizza",
+        "tags": ["45 min", "Mediterranean"],
+        "blurb": "Plantain Pizza"
+      },
+      {
+        "id": "spoonacular:664270",
+        "title": "Valentine's Chicken Marsala",
+        "tags": ["45 min"],
+        "blurb": "Valentine's Chicken Marsala"
+      },
+      {
+        "id": "spoonacular:715769",
+        "title": "Broccolini Quinoa Pilaf",
+        "tags": ["vegan", "30 min", "Mediterranean"],
+        "blurb": "Broccolini Quinoa Pilaf"
+      },
+      {
+        "id": "spoonacular:657579",
+        "title": "Quick Chicken Enchilada Soup",
+        "tags": ["45 min", "Mexican"],
+        "blurb": "Quick Chicken Enchilada Soup"
+      },
+      {
+        "id": "spoonacular:658357",
+        "title": "Rigatoni With Sweet Sausages In Creamy Tomato Sauce",
+        "tags": ["45 min"],
+        "blurb": "Rigatoni With Sweet Sausages In Creamy Tomato Sauce"
+      },
+      {
+        "id": "spoonacular:634873",
+        "title": "Best Baked Macaroni and Cheese",
+        "tags": ["vegetarian", "45 min", "American"],
+        "blurb": "Best Baked Macaroni and Cheese"
+      },
+      {
+        "id": "spoonacular:649183",
+        "title": "Lamb and Fresh Goat Cheese Roulade",
+        "tags": ["gluten-free", "45 min", "German"],
+        "blurb": "Lamb and Fresh Goat Cheese Roulade"
+      },
+      {
+        "id": "spoonacular:716427",
+        "title": "Roasted Butterflied Chicken w. Onions & Carrots",
+        "tags": ["gluten-free", "45 min"],
+        "blurb": "Roasted Butterflied Chicken w. Onions & Carrots"
+      },
+      {
+        "id": "spoonacular:636599",
+        "title": "Butternut Squash Gnocchi With Whiskey Cream Sauce",
+        "tags": ["45 min", "Mediterranean"],
+        "blurb": "Butternut Squash Gnocchi With Whiskey Cream Sauce"
+      },
+      {
+        "id": "spoonacular:631750",
+        "title": "Flank Steak with Mushroom Sauce",
+        "tags": ["45 min"],
+        "blurb": "Flank Steak with Mushroom Sauce"
+      },
+      {
+        "id": "spoonacular:642540",
+        "title": "Falafel Burgers",
+        "tags": ["vegan", "45 min", "American"],
+        "blurb": "Falafel Burgers"
+      },
+      {
+        "id": "spoonacular:662535",
+        "title": "Sweet Mustard BBQ Pork Chops",
+        "tags": ["45 min"],
+        "blurb": "Sweet Mustard BBQ Pork Chops"
+      },
+      {
+        "id": "spoonacular:729531",
+        "title": "Roasted Lemon Pepper Pork Tenderloin with Cornbread Stuffing",
+        "tags": ["1 h 30 min", "Southern"],
+        "blurb": "Roasted Lemon Pepper Pork Tenderloin with Cornbread Stuffing"
+      },
+      {
+        "id": "spoonacular:657939",
+        "title": "Ratatouille With Brie",
+        "tags": ["vegetarian", "45 min", "Mediterranean"],
+        "blurb": "Ratatouille With Brie"
+      },
+      {
+        "id": "spoonacular:654663",
+        "title": "Parmesan chicken nuggets",
+        "tags": ["45 min"],
+        "blurb": "Parmesan chicken nuggets"
+      }
+    ],
+    "facts": {
+      "spoonacular:776505": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 28
+      },
+      "spoonacular:715467": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715419": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 14
+      },
+      "spoonacular:997285": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715421": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 30
+      },
+      "spoonacular:715437": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 65
+      },
+      "spoonacular:715394": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715544": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 95
+      },
+      "spoonacular:715562": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 60
+      },
+      "spoonacular:715391": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 485
+      },
+      "spoonacular:715545": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 55
+      },
+      "spoonacular:715415": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 55
+      },
+      "spoonacular:715392": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 370
+      },
+      "spoonacular:715397": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 60
+      },
+      "spoonacular:715523": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 30
+      },
+      "spoonacular:735820": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716430": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716627": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 35
+      },
+      "spoonacular:715595": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 35
+      },
+      "spoonacular:715420": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716408": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 30
+      },
+      "spoonacular:715493": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716297": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 20
+      },
+      "spoonacular:716296": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716311": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716421": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715573": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 35
+      },
+      "spoonacular:716429": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:641893": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:638035": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715447": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 150
+      },
+      "spoonacular:640886": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:730914": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:645978": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:724324": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 40
+      },
+      "spoonacular:716300": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:664270": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715769": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 30
+      },
+      "spoonacular:657579": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:658357": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:634873": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:649183": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716427": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:636599": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:631750": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:642540": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:662535": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:729531": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 90
+      },
+      "spoonacular:657939": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:654663": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      }
+    }
+  },
+  "round-2": {
+    "cards": [
+      {
+        "id": "spoonacular:776505",
+        "title": "Sausage & Pepperoni Stromboli",
+        "tags": ["28 min"],
+        "blurb": "Sausage & Pepperoni Stromboli"
+      },
+      {
+        "id": "spoonacular:715467",
+        "title": "Turkey Pot Pie",
+        "tags": ["45 min"],
+        "blurb": "Turkey Pot Pie"
+      },
+      {
+        "id": "spoonacular:715419",
+        "title": "Slow Cooker Spicy Hot Wings",
+        "tags": ["gluten-free", "14 min", "American"],
+        "blurb": "Slow Cooker Spicy Hot Wings"
+      },
+      {
+        "id": "spoonacular:997285",
+        "title": "Shrimp and Asparagus Foil Packs with Garlic Lemon Butter Sauce",
+        "tags": ["45 min"],
+        "blurb": "Shrimp and Asparagus Foil Packs with Garlic Lemon Butter Sauce"
+      },
+      {
+        "id": "spoonacular:715421",
+        "title": "Cheesy Chicken Enchilada Quinoa Casserole",
+        "tags": ["30 min", "Mexican"],
+        "blurb": "Cheesy Chicken Enchilada Quinoa Casserole"
+      },
+      {
+        "id": "spoonacular:715437",
+        "title": "Homemade King Ranch Chicken Casserole",
+        "tags": ["1 h 5 min"],
+        "blurb": "Homemade King Ranch Chicken Casserole"
+      },
+      {
+        "id": "spoonacular:715394",
+        "title": "Chicken Enchilada Casserole",
+        "tags": ["45 min", "Mexican"],
+        "blurb": "Chicken Enchilada Casserole"
+      },
+      {
+        "id": "spoonacular:715544",
+        "title": "Brown Butter Twice Baked Sweet Potatoes",
+        "tags": ["gluten-free", "1 h 35 min"],
+        "blurb": "Brown Butter Twice Baked Sweet Potatoes"
+      },
+      {
+        "id": "spoonacular:715562",
+        "title": "Loaded Baked Potato Soup",
+        "tags": ["1 h"],
+        "blurb": "Loaded Baked Potato Soup"
+      },
+      {
+        "id": "spoonacular:715391",
+        "title": "Slow Cooker Chicken Taco Soup",
+        "tags": ["gluten-free", "8 h 5 min", "Mexican"],
+        "blurb": "Slow Cooker Chicken Taco Soup"
+      },
+      {
+        "id": "spoonacular:715545",
+        "title": "How to Make the Best Chicken Jambalaya",
+        "tags": ["55 min", "Cajun"],
+        "blurb": "How to Make the Best Chicken Jambalaya"
+      },
+      {
+        "id": "spoonacular:715415",
+        "title": "Red Lentil Soup with Chicken and Turnips",
+        "tags": ["55 min"],
+        "blurb": "Red Lentil Soup with Chicken and Turnips"
+      },
+      {
+        "id": "spoonacular:715392",
+        "title": "Easy Slow Cooker Chicken Tortilla Soup",
+        "tags": ["6 h 10 min"],
+        "blurb": "Easy Slow Cooker Chicken Tortilla Soup"
+      },
+      {
+        "id": "spoonacular:715397",
+        "title": "Cheesy Chicken and Rice Casserole",
+        "tags": ["1 h"],
+        "blurb": "Cheesy Chicken and Rice Casserole"
+      },
+      {
+        "id": "spoonacular:715523",
+        "title": "Chorizo and Beef Quinoa Stuffed Pepper",
+        "tags": ["30 min"],
+        "blurb": "Chorizo and Beef Quinoa Stuffed Pepper"
+      },
+      {
+        "id": "spoonacular:735820",
+        "title": "Crock-Pot: Asian-Style Country Ribs with Black Bean Garlic Sauce",
+        "tags": ["45 min", "Asian"],
+        "blurb": "Crock-Pot: Asian-Style Country Ribs with Black Bean Garlic Sauce"
+      },
+      {
+        "id": "spoonacular:716430",
+        "title": "Roasted Cabbage Wedge Salad with Yogurt Gorgonzola Dressing",
+        "tags": ["gluten-free", "45 min"],
+        "blurb": "Roasted Cabbage Wedge Salad with Yogurt Gorgonzola Dressing"
+      },
+      {
+        "id": "spoonacular:716627",
+        "title": "Easy Homemade Rice and Beans",
+        "tags": ["vegan", "35 min"],
+        "blurb": "Easy Homemade Rice and Beans"
+      },
+      {
+        "id": "spoonacular:715595",
+        "title": "How to Make the Cheesiest Bowtie Mac and Cheese",
+        "tags": ["vegetarian", "35 min", "American"],
+        "blurb": "How to Make the Cheesiest Bowtie Mac and Cheese"
+      },
+      {
+        "id": "spoonacular:715420",
+        "title": "Barbecue Chicken Cauliflower Couscous Bowls",
+        "tags": ["45 min", "bbq"],
+        "blurb": "Barbecue Chicken Cauliflower Couscous Bowls"
+      },
+      {
+        "id": "spoonacular:716408",
+        "title": "Greek-Style Baked Fish: Fresh, Simple, and Delicious",
+        "tags": ["gluten-free", "30 min", "Mediterranean"],
+        "blurb": "Greek-Style Baked Fish: Fresh, Simple, and Delicious"
+      },
+      {
+        "id": "spoonacular:715493",
+        "title": "Slow Cooker Red Beans and Rice",
+        "tags": ["45 min"],
+        "blurb": "Slow Cooker Red Beans and Rice"
+      },
+      {
+        "id": "spoonacular:716297",
+        "title": "Breaded Shrimp and Spicy Mayo Appetizer",
+        "tags": ["20 min"],
+        "blurb": "Breaded Shrimp and Spicy Mayo Appetizer"
+      },
+      {
+        "id": "spoonacular:716296",
+        "title": "Peri Peri Chicken and Savoury Rice",
+        "tags": ["gluten-free", "45 min"],
+        "blurb": "Peri Peri Chicken and Savoury Rice"
+      },
+      {
+        "id": "spoonacular:716311",
+        "title": "Mango Fried Rice",
+        "tags": ["45 min", "Chinese"],
+        "blurb": "Mango Fried Rice"
+      },
+      {
+        "id": "spoonacular:716421",
+        "title": "Grilled Peach Melba with Vanilla Bean Frozen Yogurt",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Grilled Peach Melba with Vanilla Bean Frozen Yogurt"
+      },
+      {
+        "id": "spoonacular:715573",
+        "title": "Simple Skillet Lasagna",
+        "tags": ["35 min", "Mediterranean"],
+        "blurb": "Simple Skillet Lasagna"
+      },
+      {
+        "id": "spoonacular:716429",
+        "title": "Pasta with Garlic, Scallions, Cauliflower & Breadcrumbs",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Pasta with Garlic, Scallions, Cauliflower & Breadcrumbs"
+      },
+      {
+        "id": "spoonacular:641893",
+        "title": "Easy Cheesy Pizza Casserole",
+        "tags": ["45 min", "Mediterranean"],
+        "blurb": "Easy Cheesy Pizza Casserole"
+      },
+      {
+        "id": "spoonacular:638035",
+        "title": "Chicken Cordon Bleu",
+        "tags": ["45 min"],
+        "blurb": "Chicken Cordon Bleu"
+      },
+      {
+        "id": "spoonacular:715447",
+        "title": "Easy Vegetable Beef Soup",
+        "tags": ["2 h 30 min"],
+        "blurb": "Easy Vegetable Beef Soup"
+      },
+      {
+        "id": "spoonacular:640886",
+        "title": "Crockpot Chicken and Dumplings",
+        "tags": ["45 min"],
+        "blurb": "Crockpot Chicken and Dumplings"
+      },
+      {
+        "id": "spoonacular:730914",
+        "title": "Basil Infused Balsamic Oven Baked Chicken",
+        "tags": ["gluten-free", "45 min"],
+        "blurb": "Basil Infused Balsamic Oven Baked Chicken"
+      },
+      {
+        "id": "spoonacular:645978",
+        "title": "Ground Turkey Stuffed Peppers",
+        "tags": ["45 min"],
+        "blurb": "Ground Turkey Stuffed Peppers"
+      },
+      {
+        "id": "spoonacular:724324",
+        "title": "Creamy Cauliflower Chowder",
+        "tags": ["40 min"],
+        "blurb": "Creamy Cauliflower Chowder"
+      },
+      {
+        "id": "spoonacular:716300",
+        "title": "Plantain Pizza",
+        "tags": ["45 min", "Mediterranean"],
+        "blurb": "Plantain Pizza"
+      },
+      {
+        "id": "spoonacular:664270",
+        "title": "Valentine's Chicken Marsala",
+        "tags": ["45 min"],
+        "blurb": "Valentine's Chicken Marsala"
+      },
+      {
+        "id": "spoonacular:715769",
+        "title": "Broccolini Quinoa Pilaf",
+        "tags": ["vegan", "30 min", "Mediterranean"],
+        "blurb": "Broccolini Quinoa Pilaf"
+      },
+      {
+        "id": "spoonacular:657579",
+        "title": "Quick Chicken Enchilada Soup",
+        "tags": ["45 min", "Mexican"],
+        "blurb": "Quick Chicken Enchilada Soup"
+      },
+      {
+        "id": "spoonacular:658357",
+        "title": "Rigatoni With Sweet Sausages In Creamy Tomato Sauce",
+        "tags": ["45 min"],
+        "blurb": "Rigatoni With Sweet Sausages In Creamy Tomato Sauce"
+      },
+      {
+        "id": "spoonacular:634873",
+        "title": "Best Baked Macaroni and Cheese",
+        "tags": ["vegetarian", "45 min", "American"],
+        "blurb": "Best Baked Macaroni and Cheese"
+      },
+      {
+        "id": "spoonacular:649183",
+        "title": "Lamb and Fresh Goat Cheese Roulade",
+        "tags": ["gluten-free", "45 min", "German"],
+        "blurb": "Lamb and Fresh Goat Cheese Roulade"
+      },
+      {
+        "id": "spoonacular:716427",
+        "title": "Roasted Butterflied Chicken w. Onions & Carrots",
+        "tags": ["gluten-free", "45 min"],
+        "blurb": "Roasted Butterflied Chicken w. Onions & Carrots"
+      },
+      {
+        "id": "spoonacular:636599",
+        "title": "Butternut Squash Gnocchi With Whiskey Cream Sauce",
+        "tags": ["45 min", "Mediterranean"],
+        "blurb": "Butternut Squash Gnocchi With Whiskey Cream Sauce"
+      },
+      {
+        "id": "spoonacular:631750",
+        "title": "Flank Steak with Mushroom Sauce",
+        "tags": ["45 min"],
+        "blurb": "Flank Steak with Mushroom Sauce"
+      },
+      {
+        "id": "spoonacular:642540",
+        "title": "Falafel Burgers",
+        "tags": ["vegan", "45 min", "American"],
+        "blurb": "Falafel Burgers"
+      },
+      {
+        "id": "spoonacular:662535",
+        "title": "Sweet Mustard BBQ Pork Chops",
+        "tags": ["45 min"],
+        "blurb": "Sweet Mustard BBQ Pork Chops"
+      },
+      {
+        "id": "spoonacular:729531",
+        "title": "Roasted Lemon Pepper Pork Tenderloin with Cornbread Stuffing",
+        "tags": ["1 h 30 min", "Southern"],
+        "blurb": "Roasted Lemon Pepper Pork Tenderloin with Cornbread Stuffing"
+      },
+      {
+        "id": "spoonacular:657939",
+        "title": "Ratatouille With Brie",
+        "tags": ["vegetarian", "45 min", "Mediterranean"],
+        "blurb": "Ratatouille With Brie"
+      },
+      {
+        "id": "spoonacular:654663",
+        "title": "Parmesan chicken nuggets",
+        "tags": ["45 min"],
+        "blurb": "Parmesan chicken nuggets"
+      }
+    ],
+    "facts": {
+      "spoonacular:776505": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 28
+      },
+      "spoonacular:715467": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715419": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 14
+      },
+      "spoonacular:997285": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715421": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 30
+      },
+      "spoonacular:715437": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 65
+      },
+      "spoonacular:715394": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715544": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 95
+      },
+      "spoonacular:715562": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 60
+      },
+      "spoonacular:715391": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 485
+      },
+      "spoonacular:715545": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 55
+      },
+      "spoonacular:715415": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 55
+      },
+      "spoonacular:715392": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 370
+      },
+      "spoonacular:715397": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 60
+      },
+      "spoonacular:715523": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 30
+      },
+      "spoonacular:735820": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716430": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716627": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 35
+      },
+      "spoonacular:715595": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 35
+      },
+      "spoonacular:715420": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716408": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 30
+      },
+      "spoonacular:715493": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716297": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 20
+      },
+      "spoonacular:716296": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716311": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716421": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715573": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 35
+      },
+      "spoonacular:716429": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:641893": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:638035": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715447": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 150
+      },
+      "spoonacular:640886": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:730914": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:645978": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:724324": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 40
+      },
+      "spoonacular:716300": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:664270": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715769": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 30
+      },
+      "spoonacular:657579": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:658357": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:634873": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:649183": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716427": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:636599": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:631750": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:642540": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:662535": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:729531": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 90
+      },
+      "spoonacular:657939": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:654663": {
+        "vegetarian": false,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      }
+    }
+  },
+  "injection": {
+    "cards": [
+      {
+        "id": "spoonacular:716627",
+        "title": "Easy Homemade Rice and Beans",
+        "tags": ["vegan", "35 min"],
+        "blurb": "Easy Homemade Rice and Beans"
+      },
+      {
+        "id": "spoonacular:715595",
+        "title": "How to Make the Cheesiest Bowtie Mac and Cheese",
+        "tags": ["vegetarian", "35 min", "American"],
+        "blurb": "How to Make the Cheesiest Bowtie Mac and Cheese"
+      },
+      {
+        "id": "spoonacular:716421",
+        "title": "Grilled Peach Melba with Vanilla Bean Frozen Yogurt",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Grilled Peach Melba with Vanilla Bean Frozen Yogurt"
+      },
+      {
+        "id": "spoonacular:716429",
+        "title": "Pasta with Garlic, Scallions, Cauliflower & Breadcrumbs",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Pasta with Garlic, Scallions, Cauliflower & Breadcrumbs"
+      },
+      {
+        "id": "spoonacular:715769",
+        "title": "Broccolini Quinoa Pilaf",
+        "tags": ["vegan", "30 min", "Mediterranean"],
+        "blurb": "Broccolini Quinoa Pilaf"
+      },
+      {
+        "id": "spoonacular:634873",
+        "title": "Best Baked Macaroni and Cheese",
+        "tags": ["vegetarian", "45 min", "American"],
+        "blurb": "Best Baked Macaroni and Cheese"
+      },
+      {
+        "id": "spoonacular:642540",
+        "title": "Falafel Burgers",
+        "tags": ["vegan", "45 min", "American"],
+        "blurb": "Falafel Burgers"
+      },
+      {
+        "id": "spoonacular:657939",
+        "title": "Ratatouille With Brie",
+        "tags": ["vegetarian", "45 min", "Mediterranean"],
+        "blurb": "Ratatouille With Brie"
+      },
+      {
+        "id": "spoonacular:643859",
+        "title": "Frittata with Mushrooms, Thyme, and Parmigiano Cheese",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Frittata with Mushrooms, Thyme, and Parmigiano Cheese"
+      },
+      {
+        "id": "spoonacular:782601",
+        "title": "Red Kidney Bean Jambalaya",
+        "tags": ["vegan", "45 min", "Cajun"],
+        "blurb": "Red Kidney Bean Jambalaya"
+      },
+      {
+        "id": "spoonacular:642332",
+        "title": "Eggs Florentine",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Eggs Florentine"
+      },
+      {
+        "id": "spoonacular:716004",
+        "title": "Quinoa and Chickpea Salad with Sun-Dried Tomatoes and Dried Cherries",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Quinoa and Chickpea Salad with Sun-Dried Tomatoes and Dried Cherries"
+      },
+      {
+        "id": "spoonacular:664147",
+        "title": "Tuscan White Bean Soup with Olive Oil and Rosemary",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Tuscan White Bean Soup with Olive Oil and Rosemary"
+      },
+      {
+        "id": "spoonacular:636589",
+        "title": "Butternut Squash Frittata",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Butternut Squash Frittata"
+      },
+      {
+        "id": "spoonacular:646930",
+        "title": "Homemade Broccoli Cheddar Soup",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Homemade Broccoli Cheddar Soup"
+      },
+      {
+        "id": "spoonacular:645265",
+        "title": "Great Greek Salad",
+        "tags": ["vegetarian", "45 min", "Mediterranean"],
+        "blurb": "Great Greek Salad"
+      },
+      {
+        "id": "spoonacular:647830",
+        "title": "Indian Lentil Dahl",
+        "tags": ["vegan", "45 min", "Indian"],
+        "blurb": "Indian Lentil Dahl"
+      },
+      {
+        "id": "spoonacular:639629",
+        "title": "Classic Macaroni and Cheese",
+        "tags": ["vegetarian", "45 min", "American"],
+        "blurb": "Classic Macaroni and Cheese"
+      },
+      {
+        "id": "spoonacular:632925",
+        "title": "Asparagus and Asiago Frittata",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Asparagus and Asiago Frittata"
+      },
+      {
+        "id": "spoonacular:642272",
+        "title": "Eggplant & Artichoke Heart Galettes",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Eggplant & Artichoke Heart Galettes"
+      },
+      {
+        "id": "spoonacular:637067",
+        "title": "Caramelized Tofu & Gala Apple Salad",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Caramelized Tofu & Gala Apple Salad"
+      },
+      {
+        "id": "spoonacular:663559",
+        "title": "Tomato and lentil soup",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Tomato and lentil soup"
+      },
+      {
+        "id": "spoonacular:652417",
+        "title": "Moroccan chickpea and lentil stew",
+        "tags": ["vegan", "30 min"],
+        "blurb": "Moroccan chickpea and lentil stew"
+      },
+      {
+        "id": "spoonacular:650239",
+        "title": "Loaded Veggie Omelet",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Loaded Veggie Omelet"
+      },
+      {
+        "id": "spoonacular:646738",
+        "title": "Herbivoracious' White Bean and Kale Soup",
+        "tags": ["vegan", "45 min"],
+        "blurb": "Herbivoracious' White Bean and Kale Soup"
+      },
+      {
+        "id": "spoonacular:716245",
+        "title": "Avocado Egg Salad",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Avocado Egg Salad"
+      },
+      {
+        "id": "spoonacular:655806",
+        "title": "Pesto & Yogurt Pasta",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Pesto & Yogurt Pasta"
+      },
+      {
+        "id": "spoonacular:1098387",
+        "title": "Quinoa Salad with Barberries & Nuts",
+        "tags": ["vegan", "30 min"],
+        "blurb": "Quinoa Salad with Barberries & Nuts"
+      },
+      {
+        "id": "spoonacular:638744",
+        "title": "Chipotle Cheese Stuffed Black Bean Burgers with Avocado Creme",
+        "tags": ["vegetarian", "45 min", "American"],
+        "blurb": "Chipotle Cheese Stuffed Black Bean Burgers with Avocado Creme"
+      },
+      {
+        "id": "spoonacular:661365",
+        "title": "Spinach, Tomato & Onion Couscous",
+        "tags": ["vegetarian", "45 min"],
+        "blurb": "Spinach, Tomato & Onion Couscous"
+      }
+    ],
+    "facts": {
+      "spoonacular:716627": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 35
+      },
+      "spoonacular:715595": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 35
+      },
+      "spoonacular:716421": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716429": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:715769": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 30
+      },
+      "spoonacular:634873": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:642540": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:657939": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:643859": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:782601": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:642332": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716004": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:664147": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:636589": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:646930": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:645265": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:647830": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:639629": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:632925": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:642272": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:637067": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:663559": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:652417": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 30
+      },
+      "spoonacular:650239": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": true,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:646738": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:716245": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": true,
+        "readyInMinutes": 45
+      },
+      "spoonacular:655806": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:1098387": {
+        "vegetarian": true,
+        "vegan": true,
+        "glutenFree": true,
+        "dairyFree": true,
+        "readyInMinutes": 30
+      },
+      "spoonacular:638744": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      },
+      "spoonacular:661365": {
+        "vegetarian": true,
+        "vegan": false,
+        "glutenFree": false,
+        "dairyFree": false,
+        "readyInMinutes": 45
+      }
+    }
+  }
+}
