@@ -16,6 +16,14 @@ updates:
         dependency-type: development
       runtime:
         dependency-type: production
+    # Major versions are deliberate upgrades, not weekly bumps: @types/node must match
+    # the Node 22 runtime, and TypeScript 7 (a new compiler) needs the lint tooling to
+    # support it first. Security fixes still arrive.
+    ignore:
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
     open-pull-requests-limit: 5
 
   - package-ecosystem: github-actions
@@ -31,3 +39,7 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    # Same Node major as .nvmrc and CI; a new major is a deliberate upgrade.
+    ignore:
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
