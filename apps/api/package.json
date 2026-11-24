@@ -13,15 +13,15 @@
     "eval": "tsx --env-file-if-exists=../../.env evals/run.ts"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.3.323",
-    "@anthropic-ai/sdk": "^1.8.0",
+    "@anthropic-ai/claude-agent-sdk": "^0.3.327",
+    "@anthropic-ai/sdk": "^1.10.0",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@yumanimous/db": "^0.0.0",
     "@yumanimous/mcp-recipes": "^0.0.0",
     "@yumanimous/mcp-session": "^0.0.0",
     "@yumanimous/shared": "*",
     "express": "^5.3.0",
-    "express-rate-limit": "8.7.2",
+    "express-rate-limit": "8.7.4",
     "helmet": "8.3.0",
     "pg": "^8.23.1",
     "socket.io": "^4.8.4",
